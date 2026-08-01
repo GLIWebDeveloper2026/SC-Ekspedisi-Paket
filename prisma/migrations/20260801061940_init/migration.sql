@@ -49,22 +49,13 @@ CREATE TABLE "Warehouse" (
 );
 
 -- CreateTable
-CREATE TABLE "Courier" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "warehouseId" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "Courier_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "passwordHash" TEXT NOT NULL,
     "role" "Role" NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "agentId" TEXT,
     "warehouseId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -255,9 +246,6 @@ CREATE UNIQUE INDEX "CodCollection_resiId_key" ON "CodCollection"("resiId");
 ALTER TABLE "Agent" ADD CONSTRAINT "Agent_districtId_fkey" FOREIGN KEY ("districtId") REFERENCES "District"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Courier" ADD CONSTRAINT "Courier_warehouseId_fkey" FOREIGN KEY ("warehouseId") REFERENCES "Warehouse"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_agentId_fkey" FOREIGN KEY ("agentId") REFERENCES "Agent"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -288,13 +276,13 @@ ALTER TABLE "PackageCustodyEvent" ADD CONSTRAINT "PackageCustodyEvent_resiId_fke
 ALTER TABLE "DeliveryAttempt" ADD CONSTRAINT "DeliveryAttempt_resiId_fkey" FOREIGN KEY ("resiId") REFERENCES "Resi"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "DeliveryAttempt" ADD CONSTRAINT "DeliveryAttempt_courierId_fkey" FOREIGN KEY ("courierId") REFERENCES "Courier"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "DeliveryAttempt" ADD CONSTRAINT "DeliveryAttempt_courierId_fkey" FOREIGN KEY ("courierId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "CodCollection" ADD CONSTRAINT "CodCollection_resiId_fkey" FOREIGN KEY ("resiId") REFERENCES "Resi"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CodCollection" ADD CONSTRAINT "CodCollection_courierId_fkey" FOREIGN KEY ("courierId") REFERENCES "Courier"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "CodCollection" ADD CONSTRAINT "CodCollection_courierId_fkey" FOREIGN KEY ("courierId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "PaymentTransactionItem" ADD CONSTRAINT "PaymentTransactionItem_paymentTransactionId_fkey" FOREIGN KEY ("paymentTransactionId") REFERENCES "PaymentTransaction"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
