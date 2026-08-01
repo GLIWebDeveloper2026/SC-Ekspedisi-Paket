@@ -2,11 +2,11 @@ import { describe, it, expect } from "vitest";
 import { hitungSetoranCod, hitungDiscrepancyRemit } from "./hitungSetoranCod";
 
 describe("hitungSetoranCod", () => {
-  it("menghitung setoran wajib normal: nilaiCod - ongkir - komisi", () => {
-    // nilaiCod 350.000, ongkir 30.000, komisi 1.5% dari nilaiCod (5.250) => 314.750
-    const hasil = hitungSetoranCod({ nilaiCod: 350000, ongkir: 30000, komisiPercent: 1.5 });
-    expect(hasil.komisiAmount).toBe(5250);
-    expect(hasil.expectedRemit).toBe(314750);
+  it("menghitung setoran wajib normal (Kejadian E): nilaiCod - ongkir - komisi", () => {
+    // Kejadian E studi kasus: COD 350.000, ongkir 25.000, komisi 3% dari nilaiCod (10.500) => 314.500
+    const hasil = hitungSetoranCod({ nilaiCod: 350000, ongkir: 25000, komisiPercent: 3 });
+    expect(hasil.komisiAmount).toBe(10500);
+    expect(hasil.expectedRemit).toBe(314500);
   });
 
   it("komisi 0% berarti setoran wajib = nilaiCod - ongkir", () => {
