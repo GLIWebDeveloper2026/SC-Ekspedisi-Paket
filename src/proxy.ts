@@ -20,6 +20,12 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL("/", req.nextUrl.origin));
   }
 
+  // Kurir selalu diarahkan ke PWA mobile "Mode Malam Jalan", bukan dashboard
+  // desktop "Buku Ledger" — dua mode ini dipisah menurut konteks kerja masing-masing.
+  if (session?.user?.role === "KURIR" && !pathname.startsWith("/kurir")) {
+    return NextResponse.redirect(new URL("/kurir", req.nextUrl.origin));
+  }
+
   return NextResponse.next();
 }
 
