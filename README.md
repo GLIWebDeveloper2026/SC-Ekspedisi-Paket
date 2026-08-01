@@ -54,16 +54,19 @@ npx prisma migrate dev --name init
 npm run db:seed
 ```
 
-Seed membuat data dasar (kecamatan, agen, gudang, kurir, 3 versi tarif) dan 5 akun (satu per role),
-semua dengan password `password123`:
+Seed membuat 3 kecamatan (2 normal + 1 zona jauh) dengan agen masing-masing, 1 gudang transit, 3 versi
+tarif, dan akun untuk tiap role — semua dengan password `password123`. Kardinalitas sengaja dibuat
+realistis (bukan 1 akun per role): 2 Admin Pusat, 4 Petugas Loket tersebar di 3 agen, dan **11 Kurir**
+(kurir adalah `User` biasa ber-`role KURIR`, **bukan** tabel `Courier` terpisah — lihat
+`docs/03-SKEMA-DATABASE.md`).
 
 | Email | Role |
 |---|---|
 | owner@kilat.test | OWNER |
-| admin@kilat.test | ADMIN_PUSAT |
-| loket@kilat.test | PETUGAS_LOKET |
+| admin@kilat.test, admin2@kilat.test | ADMIN_PUSAT |
+| loket@kilat.test … loket4@kilat.test | PETUGAS_LOKET |
 | gudang@kilat.test | KEPALA_GUDANG |
-| kurir@kilat.test | KURIR |
+| kurir@kilat.test, kurir2@kilat.test … kurir11@kilat.test | KURIR |
 
 ### 5. Jalankan aplikasi
 
@@ -105,9 +108,19 @@ Lalu buka `http://localhost:3000/kurir` (login sebagai `kurir@kilat.test`):
   data tersimpan lokal (Dexie/IndexedDB) dengan indikator "menunggu sinkron" di tab Riwayat, bukan error.
 - **Sinkron otomatis**: nyalakan lagi koneksi — antrian otomatis terkirim ke server (event `online`),
   tanpa perlu refresh manual.
-- Kurir pertama kali perlu memilih "Saya adalah [nama kurir]" sekali di perangkat — skema database
-  memang tidak menautkan akun login ke entitas `Courier` secara langsung (lihat alasan desain skema),
-  jadi ini dipilih di client dan disimpan di localStorage.
+- Identitas kurir diambil langsung dari sesi login (kurir = `User` ber-role `KURIR`), tidak ada langkah
+  pemilihan identitas terpisah. Kalau HP dipakai bergantian antar kurir (device pinjaman kantor), tiap
+  item di antrian offline menyimpan `courierId` milik pembuatnya saat itu dan tetap tersinkron atas nama
+  orang itu meskipun kurir lain sudah login duluan sebelum sinkron terjadi (lihat `docs/09-PWA-KURIR.md` §3.1).
+
+## Kelola Akun
+
+Sistem ini **admin-provisioned** — tidak ada pendaftaran mandiri. Halaman "Kelola Akun" (`/akun`, akses
+Owner/Admin Pusat/Kepala Gudang) dipakai untuk membuat akun baru, menonaktifkan (bukan menghapus), dan
+reset password, dengan matriks izin presisi (mis. Admin Pusat **tidak bisa** membuat sesama Admin
+Pusat/Owner — mencegah privilege escalation; Kepala Gudang hanya bisa mengelola Kurir di gudangnya
+sendiri). Semua pengguna juga bisa mengganti password sendiri lewat "Ganti Password" (sidebar desktop)
+atau tab Profil (mobile kurir). Detail matriks & alasan desainnya ada di `docs/11-KELOLA-AKUN-DAN-AUTH.md`.
 
 ## Design System
 
