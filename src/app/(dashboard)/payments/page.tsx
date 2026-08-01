@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
+import { Money } from "@/components/money";
+import { CapStempel } from "@/components/cap-stempel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +48,7 @@ export default function PaymentsPage() {
   const [payerName, setPayerName] = useState("");
   const [method, setMethod] = useState("CASH");
   const [itemsText, setItemsText] = useState("");
+  const [stamp, setStamp] = useState(false);
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -64,6 +67,7 @@ export default function PaymentsPage() {
       });
     },
     onSuccess: () => {
+      setStamp(true);
       toast.success("Transaksi pembayaran berhasil dibuat");
       setPayerName("");
       setItemsText("");
@@ -74,8 +78,9 @@ export default function PaymentsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <CapStempel show={stamp} label="Lunas" onDone={() => setStamp(false)} />
       <div>
-        <h1 className="text-2xl font-semibold">Pembayaran Batch</h1>
+        <h1 className="font-heading text-2xl font-bold">Pembayaran Batch</h1>
         <p className="text-muted-foreground">
           Satu transaksi bisa mencakup banyak resi (1:N) — tiap resi bisa punya nasib berbeda tanpa
           mengubah transaksi aslinya.
@@ -155,7 +160,9 @@ export default function PaymentsPage() {
                     <TableCell>{p.payerName}</TableCell>
                     <TableCell>{p.method}</TableCell>
                     <TableCell>{p.itemCount}</TableCell>
-                    <TableCell>Rp{p.totalAmount.toLocaleString("id-ID")}</TableCell>
+                    <TableCell>
+                      <Money amount={p.totalAmount} />
+                    </TableCell>
                     <TableCell>{new Date(p.paymentDate).toLocaleString("id-ID")}</TableCell>
                   </TableRow>
                 ))}

@@ -63,7 +63,7 @@ export default function SacksPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Karung / Sack</h1>
+        <h1 className="font-heading text-2xl font-bold">Karung / Sack</h1>
         <p className="text-muted-foreground">
           Isi karung dicatat eksplisit supaya selisih jumlah paket bisa dideteksi.
         </p>

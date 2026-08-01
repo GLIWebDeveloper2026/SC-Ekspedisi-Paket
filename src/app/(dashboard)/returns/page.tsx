@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
+import { Money } from "@/components/money";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,7 +73,7 @@ export default function ReturnsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Retur</h1>
+        <h1 className="font-heading text-2xl font-bold">Retur</h1>
         <p className="text-muted-foreground">
           Retur otomatis setelah 7 hari tidak terkirim/diambil, ongkir balik ditanggung sesuai
           kebijakan.
@@ -154,7 +155,9 @@ export default function ReturnsPage() {
                   <TableRow key={r.id}>
                     <TableCell>{r.noResi}</TableCell>
                     <TableCell>{r.reason}</TableCell>
-                    <TableCell>Rp{r.returnShippingCost.toLocaleString("id-ID")}</TableCell>
+                    <TableCell>
+                      <Money amount={r.returnShippingCost} />
+                    </TableCell>
                     <TableCell>{r.borneBy}</TableCell>
                     <TableCell>{new Date(r.initiatedAt).toLocaleString("id-ID")}</TableCell>
                   </TableRow>

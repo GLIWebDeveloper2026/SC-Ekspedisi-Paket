@@ -4,6 +4,7 @@ import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -98,7 +99,7 @@ export default function ResiDetailPage({ params }: { params: Promise<{ id: strin
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">{resi.noResi}</h1>
+        <h1 className="font-heading text-2xl font-bold">{resi.noResi}</h1>
         <p className="text-muted-foreground">
           {resi.senderName} → {resi.recipientName}
         </p>
@@ -111,12 +112,14 @@ export default function ResiDetailPage({ params }: { params: Promise<{ id: strin
           </CardHeader>
           <CardContent className="flex flex-col gap-2 text-sm">
             <Row label="Layanan" value={resi.serviceType} />
-            <Row label="Berat Aktual" value={`${resi.beratAktualKg} kg`} />
-            <Row label="Berat Tertagih" value={`${resi.beratTertagihKg} kg`} />
-            <Row label="Biaya Dasar" value={`Rp${resi.biayaDasar.toLocaleString("id-ID")}`} />
-            <Row label="Biaya Zona" value={`Rp${resi.biayaZona.toLocaleString("id-ID")}`} />
-            <Row label="Total Ongkir" value={`Rp${resi.totalOngkir.toLocaleString("id-ID")}`} bold />
-            {resi.isCod && <Row label="Nilai COD" value={`Rp${resi.nilaiCod?.toLocaleString("id-ID")}`} />}
+            <Row label="Berat Aktual" value={`${resi.beratAktualKg} kg`} mono />
+            <Row label="Berat Tertagih" value={`${resi.beratTertagihKg} kg`} mono />
+            <Row label="Biaya Dasar" value={`Rp${resi.biayaDasar.toLocaleString("id-ID")}`} mono />
+            <Row label="Biaya Zona" value={`Rp${resi.biayaZona.toLocaleString("id-ID")}`} mono />
+            <Row label="Total Ongkir" value={`Rp${resi.totalOngkir.toLocaleString("id-ID")}`} bold mono />
+            {resi.isCod && (
+              <Row label="Nilai COD" value={`Rp${resi.nilaiCod?.toLocaleString("id-ID")}`} mono />
+            )}
             <Row label="Alamat Penerima" value={resi.recipientAddress} />
           </CardContent>
         </Card>
@@ -209,11 +212,21 @@ export default function ResiDetailPage({ params }: { params: Promise<{ id: strin
   );
 }
 
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+function Row({
+  label,
+  value,
+  bold,
+  mono,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+  mono?: boolean;
+}) {
   return (
     <div className="flex justify-between">
       <span className="text-muted-foreground">{label}</span>
-      <span className={bold ? "font-semibold" : ""}>{value}</span>
+      <span className={cn(bold && "font-semibold", mono && "font-mono tabular-nums")}>{value}</span>
     </div>
   );
 }

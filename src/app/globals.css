@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono-data);
+  --font-heading: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -46,41 +46,98 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Named tokens grounded in the expedition domain — see docs/10-UIUX-DESIGN-SYSTEM.md */
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-paper-muted: var(--paper-muted);
+  --color-stempel: var(--stempel);
+  --color-terpal: var(--terpal);
+  --color-night: var(--night);
+  --color-night-text: var(--night-text);
+  --color-lampu-natrium: var(--lampu-natrium);
 }
 
+/*
+ * Mode "Buku Ledger" (default) — petugas loket/gudang/admin, desktop dashboard.
+ * Latar kertas manifest, tenang, dioptimalkan untuk baca angka lama.
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --ink: #211e1a;
+  --paper: #eae6db;
+  --paper-muted: #ddd8c9;
+  --stempel: #b23a2c;
+  --terpal: #1f5c73;
+  --night: #17191b;
+  --night-text: #edeae3;
+  --lampu-natrium: #e8a33d;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #f2f0e7;
+  --card-foreground: var(--ink);
+  --popover: #f2f0e7;
+  --popover-foreground: var(--ink);
+  --primary: var(--terpal);
+  --primary-foreground: #f5f3ec;
+  --secondary: var(--paper-muted);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper-muted);
+  --muted-foreground: #6b6656;
+  --accent: var(--paper-muted);
+  --accent-foreground: var(--ink);
+  --destructive: var(--stempel);
+  --border: #c9c3b2;
+  --input: #c9c3b2;
+  --ring: var(--terpal);
+  --chart-1: var(--terpal);
+  --chart-2: var(--lampu-natrium);
+  --chart-3: var(--stempel);
+  --chart-4: #6b6656;
+  --chart-5: var(--ink);
+  --radius: 0.5rem;
+  --sidebar: #e2ded1;
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--terpal);
+  --sidebar-primary-foreground: #f5f3ec;
+  --sidebar-accent: var(--paper-muted);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: #c9c3b2;
+  --sidebar-ring: var(--terpal);
+}
+
+/*
+ * Mode "Malam Jalan" — kurir, mobile PWA. Diterapkan lewat class `.dark-jalan`
+ * yang dibungkus di root layout `/kurir`, BUKAN toggle preferensi user — ini
+ * mode berbasis konteks kerja (lapangan, sering malam), bukan tema pilihan.
+ */
+.dark-jalan {
+  --background: var(--night);
+  --foreground: var(--night-text);
+  --card: #1d2023;
+  --card-foreground: var(--night-text);
+  --popover: #1d2023;
+  --popover-foreground: var(--night-text);
+  --primary: var(--lampu-natrium);
+  --primary-foreground: #201502;
+  --secondary: #22262a;
+  --secondary-foreground: var(--night-text);
+  --muted: #22262a;
+  --muted-foreground: #9c9890;
+  --accent: #22262a;
+  --accent-foreground: var(--night-text);
+  --destructive: var(--stempel);
+  --border: #2b2f33;
+  --input: #2b2f33;
+  --ring: var(--lampu-natrium);
+  --sidebar: #1d2023;
+  --sidebar-foreground: var(--night-text);
+  --sidebar-primary: var(--lampu-natrium);
+  --sidebar-primary-foreground: #201502;
+  --sidebar-accent: #22262a;
+  --sidebar-accent-foreground: var(--night-text);
+  --sidebar-border: #2b2f33;
+  --sidebar-ring: var(--lampu-natrium);
 }
 
 .dark {
@@ -126,5 +183,40 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .font-heading {
+    letter-spacing: -0.01em;
+  }
+}
+
+@keyframes cap-stempel-press {
+  0% {
+    transform: scale(2.2) rotate(-14deg);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(0.92) rotate(-8deg);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1.05) rotate(-8deg);
+  }
+  100% {
+    transform: scale(1) rotate(-8deg);
+    opacity: 1;
+  }
+}
+
+.cap-stempel-mark {
+  background: color-mix(in oklch, var(--stempel) 8%, transparent);
+  animation: cap-stempel-press 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cap-stempel-mark {
+    animation: none;
   }
 }

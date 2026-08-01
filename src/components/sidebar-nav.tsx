@@ -37,7 +37,7 @@ export function SidebarNav({
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
       <div className="border-b p-4">
-        <p className="font-semibold">Kilat Nusantara</p>
+        <p className="font-heading font-bold">Kilat Nusantara</p>
         <p className="text-xs text-muted-foreground">{userName}</p>
         <p className="text-xs text-muted-foreground">{userRole}</p>
       </div>

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
+import { Money } from "@/components/money";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -53,7 +54,7 @@ export default function ReportsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Laporan</h1>
+        <h1 className="font-heading text-2xl font-bold">Laporan</h1>
         <p className="text-muted-foreground">Diskrepansi sack/COD & kandidat retur (&gt;7 hari)</p>
       </div>
 
@@ -118,10 +119,12 @@ export default function ReportsPage() {
                   <TableRow key={c.resiId}>
                     <TableCell>{c.noResi}</TableCell>
                     <TableCell>{c.courierName}</TableCell>
-                    <TableCell>Rp{c.expectedRemit.toLocaleString("id-ID")}</TableCell>
-                    <TableCell>{c.remitAmount ? `Rp${c.remitAmount.toLocaleString("id-ID")}` : "-"}</TableCell>
-                    <TableCell className="text-destructive">
-                      {c.discrepancyAmount ? `Rp${c.discrepancyAmount.toLocaleString("id-ID")}` : "-"}
+                    <TableCell>
+                      <Money amount={c.expectedRemit} />
+                    </TableCell>
+                    <TableCell>{c.remitAmount !== null ? <Money amount={c.remitAmount} /> : "-"}</TableCell>
+                    <TableCell className="text-stempel">
+                      {c.discrepancyAmount !== null ? <Money amount={c.discrepancyAmount} /> : "-"}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
+import { Money } from "@/components/money";
+import { CapStempel } from "@/components/cap-stempel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +53,7 @@ export default function CodPage() {
 
   const [resiId, setResiId] = useState("");
   const [remitAmount, setRemitAmount] = useState("");
+  const [stamp, setStamp] = useState(false);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -59,11 +62,12 @@ export default function CodPage() {
         body: JSON.stringify({ remitAmount: Number(remitAmount) }),
       }),
     onSuccess: (res) => {
-      toast.success(
-        res.remitStatus === "REMITTED"
-          ? "Setoran lunas, tidak ada diskrepansi"
-          : `Diskrepansi terdeteksi: Rp${res.discrepancyAmount.toLocaleString("id-ID")}`,
-      );
+      if (res.remitStatus === "REMITTED") {
+        setStamp(true);
+        toast.success("Setoran lunas, tidak ada diskrepansi");
+      } else {
+        toast.error(`Diskrepansi terdeteksi: Rp${res.discrepancyAmount.toLocaleString("id-ID")}`);
+      }
       setResiId("");
       setRemitAmount("");
       queryClient.invalidateQueries({ queryKey: ["cod-list"] });
@@ -73,8 +77,9 @@ export default function CodPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <CapStempel show={stamp} label="Lunas" onDone={() => setStamp(false)} />
       <div>
-        <h1 className="text-2xl font-semibold">COD</h1>
+        <h1 className="font-heading text-2xl font-bold">COD</h1>
         <p className="text-muted-foreground">
           Setoran wajib kurir = nilai COD − ongkir − komisi.
         </p>
@@ -137,9 +142,13 @@ export default function CodPage() {
                   <TableRow key={c.resiId}>
                     <TableCell>{c.noResi}</TableCell>
                     <TableCell>{c.courierName}</TableCell>
-                    <TableCell>Rp{c.collectedAmount.toLocaleString("id-ID")}</TableCell>
-                    <TableCell>Rp{c.expectedRemit.toLocaleString("id-ID")}</TableCell>
-                    <TableCell>{c.remitAmount ? `Rp${c.remitAmount.toLocaleString("id-ID")}` : "-"}</TableCell>
+                    <TableCell>
+                      <Money amount={c.collectedAmount} />
+                    </TableCell>
+                    <TableCell>
+                      <Money amount={c.expectedRemit} />
+                    </TableCell>
+                    <TableCell>{c.remitAmount !== null ? <Money amount={c.remitAmount} /> : "-"}</TableCell>
                     <TableCell>
                       <Badge variant={statusVariant(c.remitStatus)}>{c.remitStatus}</Badge>
                     </TableCell>

@@ -42,7 +42,7 @@ function LoginForm() {
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Kilat Nusantara</CardTitle>
+          <CardTitle className="font-heading text-xl font-bold">Kilat Nusantara</CardTitle>
           <CardDescription>Masuk untuk mengakses sistem pengiriman paket</CardDescription>
         </CardHeader>
         <CardContent>

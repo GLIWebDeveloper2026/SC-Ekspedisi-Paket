@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
+import { Money } from "@/components/money";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,10 +38,12 @@ export default function ResiListPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Resi</h1>
+          <h1 className="font-heading text-2xl font-bold">Resi</h1>
           <p className="text-muted-foreground">Daftar resi yang sudah dibuat</p>
         </div>
-        <Button render={<Link href="/resi/new" />}>+ Buat Resi</Button>
+        <Button render={<Link href="/resi/new" />} nativeButton={false}>
+          + Buat Resi
+        </Button>
       </div>
 
       <Card>
@@ -72,7 +75,9 @@ export default function ResiListPage() {
                     <TableCell>{r.recipientName}</TableCell>
                     <TableCell>{r.originAgent?.name}</TableCell>
                     <TableCell>{r.serviceType}</TableCell>
-                    <TableCell>Rp{r.totalOngkir.toLocaleString("id-ID")}</TableCell>
+                    <TableCell>
+                      <Money amount={r.totalOngkir} />
+                    </TableCell>
                     <TableCell>{r.isCod ? <Badge>COD</Badge> : "-"}</TableCell>
                   </TableRow>
                 ))}

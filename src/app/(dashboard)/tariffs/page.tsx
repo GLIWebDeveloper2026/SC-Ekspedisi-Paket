@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
+import { Money } from "@/components/money";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,7 +70,7 @@ export default function TariffsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Tarif</h1>
+        <h1 className="font-heading text-2xl font-bold">Tarif</h1>
         <p className="text-muted-foreground">
           Tarif adalah data bertanggal (versioned) — resi lama tetap merujuk snapshot tarif saat
           dibuat, tidak ikut berubah kalau tarif direvisi.
@@ -160,8 +161,10 @@ export default function TariffsPage() {
                 {data.data.map((t) => (
                   <TableRow key={t.id}>
                     <TableCell>{t.serviceType}</TableCell>
-                    <TableCell>Rp{t.ratePerKg.toLocaleString("id-ID")}</TableCell>
-                    <TableCell>{t.volumetricDivisor}</TableCell>
+                    <TableCell>
+                      <Money amount={t.ratePerKg} />
+                    </TableCell>
+                    <TableCell className="font-mono tabular-nums">{t.volumetricDivisor}</TableCell>
                     <TableCell>{new Date(t.effectiveFrom).toLocaleDateString("id-ID")}</TableCell>
                     <TableCell>
                       {t.effectiveTo ? new Date(t.effectiveTo).toLocaleDateString("id-ID") : "Aktif"}

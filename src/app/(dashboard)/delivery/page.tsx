@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
+import { CapStempel } from "@/components/cap-stempel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,7 @@ export default function DeliveryAttemptsPage() {
   const [thirdPartyName, setThirdPartyName] = useState("");
   const [evidenceNote, setEvidenceNote] = useState("");
   const [proofPhoto, setProofPhoto] = useState<File | null>(null);
+  const [stamp, setStamp] = useState(false);
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -78,6 +80,7 @@ export default function DeliveryAttemptsPage() {
       });
     },
     onSuccess: (res) => {
+      if (result === "BERHASIL") setStamp(true);
       toast.success(
         `Percobaan ke-${res.attemptNumber} dicatat` +
           (res.autoReturnTriggered ? " — otomatis diretur ke gudang (3x gagal)" : ""),
@@ -93,8 +96,9 @@ export default function DeliveryAttemptsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <CapStempel show={stamp} label="Terkirim" onDone={() => setStamp(false)} />
       <div>
-        <h1 className="text-2xl font-semibold">Delivery Attempt</h1>
+        <h1 className="font-heading text-2xl font-bold">Delivery Attempt</h1>
         <p className="text-muted-foreground">
           3x gagal berturut-turut otomatis memicu retur ke gudang.
         </p>
