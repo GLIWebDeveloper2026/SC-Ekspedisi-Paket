@@ -8,6 +8,7 @@ const TABS = [
   { href: "/kurir", label: "Resi" },
   { href: "/kurir/cod", label: "COD" },
   { href: "/kurir/riwayat", label: "Riwayat" },
+  { href: "/kurir/profil", label: "Profil" },
 ];
 
 export function BottomTabBar() {

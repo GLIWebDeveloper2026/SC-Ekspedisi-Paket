@@ -23,6 +23,11 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/returns", label: "Retur" },
   { href: "/tariffs", label: "Tarif", roles: ["OWNER"] as Role[] },
   { href: "/reports", label: "Laporan" },
+  {
+    href: "/akun",
+    label: "Kelola Akun",
+    roles: ["OWNER", "ADMIN_PUSAT", "KEPALA_GUDANG"] as Role[],
+  },
 ];
 
 export function SidebarNav({
@@ -56,6 +61,15 @@ export function SidebarNav({
         ))}
       </nav>
       <div className="border-t p-2">
+        <Link
+          href="/ganti-password"
+          className={cn(
+            "block rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent",
+            pathname === "/ganti-password" && "bg-sidebar-accent font-medium",
+          )}
+        >
+          Ganti Password
+        </Link>
         <Button variant="ghost" className="w-full justify-start" onClick={() => signOut({ callbackUrl: "/login" })}>
           Keluar
         </Button>
