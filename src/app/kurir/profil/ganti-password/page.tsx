@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { KeyRound } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,7 +61,8 @@ export default function GantiPasswordPage() {
               onChange={(e) => setNewPassword(e.target.value)}
             />
           </div>
-          <Button type="submit" size="lg" className="h-12" disabled={mutation.isPending}>
+          <Button type="submit" size="lg" className="h-12 gap-1.5" disabled={mutation.isPending}>
+            <KeyRound className="size-4" />
             {mutation.isPending ? "Menyimpan..." : "Simpan"}
           </Button>
         </form>

@@ -7,6 +7,7 @@ import { Truck, ClipboardList, PackageSearch } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { CapStempel } from "@/components/cap-stempel";
 import { PageHeader } from "@/components/page-header";
+import { SearchableSelect } from "@/components/searchable-select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -122,33 +123,21 @@ export default function DeliveryAttemptsPage() {
           >
             <div className="flex flex-col gap-2">
               <Label>Resi</Label>
-              <Select value={resiId} onValueChange={(v) => setResiId(v ?? "")}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih resi" />
-                </SelectTrigger>
-                <SelectContent>
-                  {resiOptions?.data.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.noResi}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                placeholder="Pilih resi"
+                value={resiId}
+                onValueChange={setResiId}
+                options={(resiOptions?.data ?? []).map((r) => ({ id: r.id, label: r.noResi }))}
+              />
             </div>
             <div className="flex flex-col gap-2">
               <Label>Kurir</Label>
-              <Select value={courierId} onValueChange={(v) => setCourierId(v ?? "")}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih kurir" />
-                </SelectTrigger>
-                <SelectContent>
-                  {courierOptions?.data.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                placeholder="Pilih kurir"
+                value={courierId}
+                onValueChange={setCourierId}
+                options={(courierOptions?.data ?? []).map((c) => ({ id: c.id, label: c.name }))}
+              />
             </div>
             <div className="flex flex-col gap-2">
               <Label>Hasil</Label>

@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CreditCard, ReceiptText, History } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
+import { matchesSearch } from "@/lib/filter-utils";
 import { Money } from "@/components/money";
 import { CapStempel } from "@/components/cap-stempel";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
+import { TableSearch } from "@/components/table-search";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +54,12 @@ export default function PaymentsPage() {
   const [method, setMethod] = useState("CASH");
   const [itemsText, setItemsText] = useState("");
   const [stamp, setStamp] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(
+    () => (data?.data ?? []).filter((p) => matchesSearch(search, p.payerName, p.method)),
+    [data, search],
+  );
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -151,35 +159,49 @@ export default function PaymentsPage() {
         </CardHeader>
         <CardContent>
           {isLoading && <p className="text-sm text-muted-foreground">Memuat...</p>}
-          {data &&
-            (data.data.length === 0 ? (
-              <EmptyState icon={ReceiptText} title="Belum ada transaksi" description="Transaksi pembayaran akan muncul di sini." />
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Pembayar</TableHead>
-                    <TableHead>Metode</TableHead>
-                    <TableHead>Jumlah Resi</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Tanggal</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.data.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell>{p.payerName}</TableCell>
-                      <TableCell>{p.method}</TableCell>
-                      <TableCell className="font-mono tabular-nums">{p.itemCount}</TableCell>
-                      <TableCell>
-                        <Money amount={p.totalAmount} />
-                      </TableCell>
-                      <TableCell>{new Date(p.paymentDate).toLocaleString("id-ID")}</TableCell>
+          {data && (
+            <>
+              {data.data.length > 0 && (
+                <TableSearch value={search} onChange={setSearch} placeholder="Cari nama pembayar atau metode..." />
+              )}
+              {filtered.length === 0 ? (
+                <EmptyState
+                  icon={ReceiptText}
+                  title={data.data.length === 0 ? "Belum ada transaksi" : "Tidak ada hasil"}
+                  description={
+                    data.data.length === 0
+                      ? "Transaksi pembayaran akan muncul di sini."
+                      : "Coba ubah kata kunci pencarian."
+                  }
+                />
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Pembayar</TableHead>
+                      <TableHead>Metode</TableHead>
+                      <TableHead>Jumlah Resi</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Tanggal</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ))}
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((p) => (
+                      <TableRow key={p.id}>
+                        <TableCell>{p.payerName}</TableCell>
+                        <TableCell>{p.method}</TableCell>
+                        <TableCell className="font-mono tabular-nums">{p.itemCount}</TableCell>
+                        <TableCell>
+                          <Money amount={p.totalAmount} />
+                        </TableCell>
+                        <TableCell>{new Date(p.paymentDate).toLocaleString("id-ID")}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

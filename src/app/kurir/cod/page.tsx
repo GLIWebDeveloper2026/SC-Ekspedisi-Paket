@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Wallet, HandCoins } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
+import { matchesSearch } from "@/lib/filter-utils";
 import { enqueueCodRemit } from "@/lib/offline/offlineQueue";
 import { CapStempel } from "@/components/cap-stempel";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Money } from "@/components/money";
 import { EmptyState } from "@/components/empty-state";
+import { TableSearch } from "@/components/table-search";
 
 interface CodItem {
   resiId: string;
@@ -40,6 +42,12 @@ export default function KurirCodPage() {
   const [activeResiId, setActiveResiId] = useState<string | null>(null);
   const [remitAmount, setRemitAmount] = useState("");
   const [stamp, setStamp] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(
+    () => (pending ?? []).filter((c) => matchesSearch(search, c.noResi)),
+    [pending, search],
+  );
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -81,7 +89,11 @@ export default function KurirCodPage() {
       <CapStempel show={stamp} label="Lunas" onDone={() => setStamp(false)} />
       <p className="text-sm text-muted-foreground">{pending?.length ?? 0} setoran menunggu</p>
 
-      {pending?.map((c) => (
+      {(pending?.length ?? 0) > 0 && (
+        <TableSearch value={search} onChange={setSearch} placeholder="Cari no resi..." />
+      )}
+
+      {filtered.map((c) => (
         <Card key={c.resiId}>
           <CardHeader className="flex-row items-center gap-3 space-y-0">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-lampu-natrium/15">
@@ -124,6 +136,9 @@ export default function KurirCodPage() {
 
       {pending?.length === 0 && (
         <EmptyState icon={Wallet} title="Tidak ada setoran pending" description="Semua COD sudah beres." />
+      )}
+      {(pending?.length ?? 0) > 0 && filtered.length === 0 && (
+        <EmptyState icon={Wallet} title="Tidak ada hasil" description="Coba ubah kata kunci pencarian." />
       )}
     </div>
   );

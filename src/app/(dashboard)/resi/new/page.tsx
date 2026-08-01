@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SearchableSelect } from "@/components/searchable-select";
 import {
   Select,
   SelectContent,
@@ -120,37 +121,28 @@ export default function NewResiPage() {
             <SectionLabel icon={MapPin}>Rute</SectionLabel>
             <div className="flex flex-col gap-2">
               <Label>Agen Asal</Label>
-              <Select value={form.originAgentId} onValueChange={(v) => update("originAgentId", v ?? "")}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih agen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {agents?.data.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name} ({a.districtName})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                placeholder="Pilih agen"
+                value={form.originAgentId}
+                onValueChange={(v) => update("originAgentId", v)}
+                options={(agents?.data ?? []).map((a) => ({
+                  id: a.id,
+                  label: `${a.name} (${a.districtName})`,
+                }))}
+              />
             </div>
 
             <div className="flex flex-col gap-2">
               <Label>Kecamatan Tujuan</Label>
-              <Select
+              <SearchableSelect
+                placeholder="Pilih kecamatan"
                 value={form.destinationDistrictId}
-                onValueChange={(v) => update("destinationDistrictId", v ?? "")}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih kecamatan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {districts?.data.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name} {d.isZonaJauh ? "(Zona Jauh)" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onValueChange={(v) => update("destinationDistrictId", v)}
+                options={(districts?.data ?? []).map((d) => ({
+                  id: d.id,
+                  label: d.isZonaJauh ? `${d.name} (Zona Jauh)` : d.name,
+                }))}
+              />
             </div>
 
             <SectionLabel icon={User}>Pengirim & Penerima</SectionLabel>

@@ -1,12 +1,15 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Package, MapPin, ChevronRight, PackageSearch } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
+import { matchesSearch } from "@/lib/filter-utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
+import { TableSearch } from "@/components/table-search";
 
 interface ResiListItem {
   id: string;
@@ -22,13 +25,24 @@ export default function KurirResiPage() {
     queryFn: () => apiFetch<{ data: ResiListItem[] }>("/api/resi"),
   });
 
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(
+    () => (data?.data ?? []).filter((r) => matchesSearch(search, r.noResi, r.recipientName)),
+    [data, search],
+  );
+
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">
         {isLoading ? "Memuat..." : `Hari ini: ${data?.data.length ?? 0} resi`}
       </p>
 
-      {data?.data.map((r) => (
+      {!isLoading && (data?.data.length ?? 0) > 0 && (
+        <TableSearch value={search} onChange={setSearch} placeholder="Cari no resi atau penerima..." />
+      )}
+
+      {filtered.map((r) => (
         <Link key={r.id} href={`/kurir/lapor/${r.id}`}>
           <Card className="border-white/10 bg-white/[0.03] transition-transform active:scale-[0.98]">
             <CardContent className="flex items-center gap-3 py-3">
@@ -52,6 +66,10 @@ export default function KurirResiPage() {
           </Card>
         </Link>
       ))}
+
+      {!isLoading && data && data.data.length > 0 && filtered.length === 0 && (
+        <EmptyState icon={PackageSearch} title="Tidak ada hasil" description="Coba ubah kata kunci pencarian." />
+      )}
 
       {!isLoading && data?.data.length === 0 && (
         <EmptyState icon={PackageSearch} title="Tidak ada resi" description="Belum ada resi yang perlu diantar hari ini." />

@@ -1,10 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Users, UserPlus, ShieldCheck, ShieldOff, KeyRound } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
+import { matchesSearch } from "@/lib/filter-utils";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { SearchableSelect } from "@/components/searchable-select";
+import { TableSearch } from "@/components/table-search";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,18 +141,31 @@ export default function KelolaAkunPage() {
   const needsAgent = role === "PETUGAS_LOKET";
   const needsWarehouse = actorRole !== "KEPALA_GUDANG" && (role === "KEPALA_GUDANG" || role === "KURIR");
 
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"SEMUA" | RoleValue>("SEMUA");
+
+  const filteredUsers = useMemo(() => {
+    return (data?.data ?? []).filter(
+      (u) =>
+        (roleFilter === "SEMUA" || u.role === roleFilter) &&
+        matchesSearch(search, u.name, u.email, u.agentName, u.warehouseName),
+    );
+  }, [data, search, roleFilter]);
+
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-bold">Kelola Akun</h1>
-        <p className="text-muted-foreground">
-          Akun bersifat admin-provisioned — tidak ada pendaftaran mandiri. Nonaktifkan, jangan hapus.
-        </p>
-      </div>
+      <PageHeader
+        icon={Users}
+        title="Kelola Akun"
+        description="Akun bersifat admin-provisioned — tidak ada pendaftaran mandiri. Nonaktifkan, jangan hapus."
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle>Buat Akun Baru</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <UserPlus className="size-4 text-muted-foreground" />
+            Buat Akun Baru
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form
@@ -198,36 +217,24 @@ export default function KelolaAkunPage() {
             {needsAgent && (
               <div className="flex flex-col gap-2">
                 <Label>Agen</Label>
-                <Select value={agentId} onValueChange={(v) => setAgentId(v ?? "")}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih agen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {agents?.data.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  placeholder="Pilih agen"
+                  value={agentId}
+                  onValueChange={setAgentId}
+                  options={(agents?.data ?? []).map((a) => ({ id: a.id, label: a.name }))}
+                />
               </div>
             )}
 
             {needsWarehouse && (
               <div className="flex flex-col gap-2">
                 <Label>Gudang</Label>
-                <Select value={warehouseId} onValueChange={(v) => setWarehouseId(v ?? "")}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih gudang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {warehouses?.data.map((w) => (
-                      <SelectItem key={w.id} value={w.id}>
-                        {w.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  placeholder="Pilih gudang"
+                  value={warehouseId}
+                  onValueChange={setWarehouseId}
+                  options={(warehouses?.data ?? []).map((w) => ({ id: w.id, label: w.name }))}
+                />
               </div>
             )}
 
@@ -238,7 +245,8 @@ export default function KelolaAkunPage() {
             )}
 
             <div className="sm:col-span-2">
-              <Button type="submit" disabled={createMutation.isPending}>
+              <Button type="submit" disabled={createMutation.isPending} className="gap-1.5">
+                <UserPlus className="size-4" />
                 {createMutation.isPending ? "Menyimpan..." : "Buat Akun"}
               </Button>
             </div>
@@ -248,85 +256,115 @@ export default function KelolaAkunPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Daftar Akun</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="size-4 text-muted-foreground" />
+            Daftar Akun
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading && <p className="text-sm text-muted-foreground">Memuat...</p>}
-          {data && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Username/Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Agen/Gudang</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.data.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell>{u.name}</TableCell>
-                    <TableCell>{u.email}</TableCell>
-                    <TableCell>{u.role}</TableCell>
-                    <TableCell>{u.agentName ?? u.warehouseName ?? "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant={u.isActive ? "default" : "destructive"}>
-                        {u.isActive ? "Aktif" : "Nonaktif"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-2">
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={toggleActiveMutation.isPending}
-                            onClick={() =>
-                              toggleActiveMutation.mutate({ id: u.id, isActive: !u.isActive })
-                            }
-                          >
-                            {u.isActive ? "Nonaktifkan" : "Aktifkan"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setResetTargetId(resetTargetId === u.id ? null : u.id)}
-                          >
-                            Reset Password
-                          </Button>
-                        </div>
-                        {resetTargetId === u.id && (
-                          <div className="flex gap-2">
-                            <Input
-                              type="text"
-                              placeholder="Password baru"
-                              value={newPassword}
-                              onChange={(e) => setNewPassword(e.target.value)}
-                            />
-                            <Button
-                              size="sm"
-                              disabled={resetPasswordMutation.isPending}
-                              onClick={() => resetPasswordMutation.mutate()}
-                            >
-                              Simpan
-                            </Button>
+          {data && data.data.length === 0 && (
+            <EmptyState icon={Users} title="Belum ada akun" description="Akun yang dibuat akan muncul di sini." />
+          )}
+          {data && data.data.length > 0 && (
+            <>
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <TableSearch value={search} onChange={setSearch} placeholder="Cari nama, email, agen, gudang..." />
+                <Select value={roleFilter} onValueChange={(v) => v && setRoleFilter(v as typeof roleFilter)}>
+                  <SelectTrigger className="w-full sm:w-44">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SEMUA">Semua Role</SelectItem>
+                    {ALL_ROLES.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {filteredUsers.length === 0 ? (
+                <EmptyState icon={Users} title="Tidak ada hasil" description="Coba ubah kata kunci atau filter role." />
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nama</TableHead>
+                      <TableHead>Username/Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Agen/Gudang</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((u) => (
+                      <TableRow key={u.id}>
+                        <TableCell>{u.name}</TableCell>
+                        <TableCell>{u.email}</TableCell>
+                        <TableCell>{u.role}</TableCell>
+                        <TableCell>{u.agentName ?? u.warehouseName ?? "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant={u.isActive ? "default" : "destructive"}>
+                            {u.isActive ? "Aktif" : "Nonaktif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-2">
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1.5"
+                                disabled={toggleActiveMutation.isPending}
+                                onClick={() =>
+                                  toggleActiveMutation.mutate({ id: u.id, isActive: !u.isActive })
+                                }
+                              >
+                                {u.isActive ? (
+                                  <ShieldOff className="size-3.5" />
+                                ) : (
+                                  <ShieldCheck className="size-3.5" />
+                                )}
+                                {u.isActive ? "Nonaktifkan" : "Aktifkan"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1.5"
+                                onClick={() => setResetTargetId(resetTargetId === u.id ? null : u.id)}
+                              >
+                                <KeyRound className="size-3.5" />
+                                Reset Password
+                              </Button>
+                            </div>
+                            {resetTargetId === u.id && (
+                              <div className="flex gap-2">
+                                <Input
+                                  type="text"
+                                  placeholder="Password baru"
+                                  value={newPassword}
+                                  onChange={(e) => setNewPassword(e.target.value)}
+                                />
+                                <Button
+                                  size="sm"
+                                  disabled={resetPasswordMutation.isPending}
+                                  onClick={() => resetPasswordMutation.mutate()}
+                                >
+                                  Simpan
+                                </Button>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {data.data.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      Belum ada akun.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

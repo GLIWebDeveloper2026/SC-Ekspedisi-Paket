@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { KeyRound } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 
 export default function GantiPasswordPage() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -29,7 +31,9 @@ export default function GantiPasswordPage() {
 
   return (
     <div className="mx-auto max-w-md">
-      <h1 className="font-heading mb-6 text-2xl font-bold">Ganti Password</h1>
+      <div className="mb-6">
+        <PageHeader icon={KeyRound} title="Ganti Password" />
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Akun Saya</CardTitle>
@@ -61,7 +65,8 @@ export default function GantiPasswordPage() {
                 onChange={(e) => setNewPassword(e.target.value)}
               />
             </div>
-            <Button type="submit" disabled={mutation.isPending}>
+            <Button type="submit" disabled={mutation.isPending} className="gap-1.5">
+              <KeyRound className="size-4" />
               {mutation.isPending ? "Menyimpan..." : "Simpan"}
             </Button>
           </form>

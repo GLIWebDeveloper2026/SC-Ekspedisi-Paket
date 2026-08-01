@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Boxes, PackagePlus, MapPinned } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
+import { matchesSearch } from "@/lib/filter-utils";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
+import { TableSearch } from "@/components/table-search";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +41,12 @@ export default function SacksPage() {
   const [originInfo, setOriginInfo] = useState("");
   const [destinationInfo, setDestinationInfo] = useState("");
   const [resiIdsText, setResiIdsText] = useState("");
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(
+    () => (data?.data ?? []).filter((s) => matchesSearch(search, s.originInfo, s.destinationInfo)),
+    [data, search],
+  );
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -127,31 +135,45 @@ export default function SacksPage() {
         </CardHeader>
         <CardContent>
           {isLoading && <p className="text-sm text-muted-foreground">Memuat...</p>}
-          {data &&
-            (data.data.length === 0 ? (
-              <EmptyState icon={MapPinned} title="Belum ada karung" description="Karung yang baru dibuat akan muncul di sini." />
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Asal</TableHead>
-                    <TableHead>Tujuan</TableHead>
-                    <TableHead>Jumlah Item</TableHead>
-                    <TableHead>Dibuat</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.data.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell>{s.originInfo}</TableCell>
-                      <TableCell>{s.destinationInfo}</TableCell>
-                      <TableCell className="font-mono tabular-nums">{s.itemCount}</TableCell>
-                      <TableCell>{new Date(s.createdAt).toLocaleString("id-ID")}</TableCell>
+          {data && (
+            <>
+              {data.data.length > 0 && (
+                <TableSearch value={search} onChange={setSearch} placeholder="Cari asal atau tujuan..." />
+              )}
+              {filtered.length === 0 ? (
+                <EmptyState
+                  icon={MapPinned}
+                  title={data.data.length === 0 ? "Belum ada karung" : "Tidak ada hasil"}
+                  description={
+                    data.data.length === 0
+                      ? "Karung yang baru dibuat akan muncul di sini."
+                      : "Coba ubah kata kunci pencarian."
+                  }
+                />
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Asal</TableHead>
+                      <TableHead>Tujuan</TableHead>
+                      <TableHead>Jumlah Item</TableHead>
+                      <TableHead>Dibuat</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ))}
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell>{s.originInfo}</TableCell>
+                        <TableCell>{s.destinationInfo}</TableCell>
+                        <TableCell className="font-mono tabular-nums">{s.itemCount}</TableCell>
+                        <TableCell>{new Date(s.createdAt).toLocaleString("id-ID")}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
