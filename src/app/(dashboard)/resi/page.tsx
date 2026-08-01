@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { PackageSearch, Plus, AlertCircle } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { Money } from "@/components/money";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,61 +39,68 @@ export default function ResiListPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-2xl font-bold">Resi</h1>
-          <p className="text-muted-foreground">Daftar resi yang sudah dibuat</p>
-        </div>
-        <Button render={<Link href="/resi/new" />} nativeButton={false}>
-          + Buat Resi
-        </Button>
-      </div>
+      <PageHeader
+        icon={PackageSearch}
+        title="Resi"
+        description="Daftar resi yang sudah dibuat"
+        action={
+          <Button render={<Link href="/resi/new" />} nativeButton={false} className="gap-1.5">
+            <Plus className="size-4" />
+            Buat Resi
+          </Button>
+        }
+      />
 
       <Card>
         <CardContent className="pt-6">
           {isLoading && <p className="text-sm text-muted-foreground">Memuat...</p>}
-          {error && <p className="text-sm text-destructive">{(error as Error).message}</p>}
-          {data && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>No Resi</TableHead>
-                  <TableHead>Pengirim</TableHead>
-                  <TableHead>Penerima</TableHead>
-                  <TableHead>Agen Asal</TableHead>
-                  <TableHead>Layanan</TableHead>
-                  <TableHead>Ongkir</TableHead>
-                  <TableHead>COD</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.data.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell>
-                      <Link href={`/resi/${r.id}`} className="font-medium text-primary hover:underline">
-                        {r.noResi}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{r.senderName}</TableCell>
-                    <TableCell>{r.recipientName}</TableCell>
-                    <TableCell>{r.originAgent?.name}</TableCell>
-                    <TableCell>{r.serviceType}</TableCell>
-                    <TableCell>
-                      <Money amount={r.totalOngkir} />
-                    </TableCell>
-                    <TableCell>{r.isCod ? <Badge>COD</Badge> : "-"}</TableCell>
-                  </TableRow>
-                ))}
-                {data.data.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
-                      Belum ada resi.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+          {error && (
+            <p className="flex items-center gap-1.5 text-sm text-destructive">
+              <AlertCircle className="size-4" />
+              {(error as Error).message}
+            </p>
           )}
+          {data &&
+            (data.data.length === 0 ? (
+              <EmptyState
+                icon={PackageSearch}
+                title="Belum ada resi"
+                description="Klik 'Buat Resi' untuk membuat resi pertama."
+              />
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>No Resi</TableHead>
+                    <TableHead>Pengirim</TableHead>
+                    <TableHead>Penerima</TableHead>
+                    <TableHead>Agen Asal</TableHead>
+                    <TableHead>Layanan</TableHead>
+                    <TableHead>Ongkir</TableHead>
+                    <TableHead>COD</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.data.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>
+                        <Link href={`/resi/${r.id}`} className="font-medium text-primary hover:underline">
+                          {r.noResi}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{r.senderName}</TableCell>
+                      <TableCell>{r.recipientName}</TableCell>
+                      <TableCell>{r.originAgent?.name}</TableCell>
+                      <TableCell>{r.serviceType}</TableCell>
+                      <TableCell>
+                        <Money amount={r.totalOngkir} />
+                      </TableCell>
+                      <TableCell>{r.isCod ? <Badge>COD</Badge> : "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ))}
         </CardContent>
       </Card>
     </div>

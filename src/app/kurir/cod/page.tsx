@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Wallet, HandCoins } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { enqueueCodRemit } from "@/lib/offline/offlineQueue";
 import { CapStempel } from "@/components/cap-stempel";
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Money } from "@/components/money";
+import { EmptyState } from "@/components/empty-state";
 
 interface CodItem {
   resiId: string;
@@ -81,8 +83,11 @@ export default function KurirCodPage() {
 
       {pending?.map((c) => (
         <Card key={c.resiId}>
-          <CardHeader>
-            <CardTitle className="font-heading text-base">{c.noResi}</CardTitle>
+          <CardHeader className="flex-row items-center gap-3 space-y-0">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-lampu-natrium/15">
+              <Wallet className="size-4 text-lampu-natrium" />
+            </div>
+            <CardTitle className="font-mono text-sm tracking-wide">{c.noResi}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <div className="flex justify-between text-sm">
@@ -99,15 +104,17 @@ export default function KurirCodPage() {
                   onChange={(e) => setRemitAmount(e.target.value)}
                 />
                 <Button
-                  className="h-12"
+                  className="h-12 gap-2"
                   disabled={mutation.isPending}
                   onClick={() => mutation.mutate()}
                 >
+                  <HandCoins className="size-4" />
                   {mutation.isPending ? "Mengirim..." : "Setor"}
                 </Button>
               </div>
             ) : (
-              <Button variant="outline" onClick={() => setActiveResiId(c.resiId)}>
+              <Button variant="outline" className="gap-2" onClick={() => setActiveResiId(c.resiId)}>
+                <HandCoins className="size-4" />
                 Setor Sekarang
               </Button>
             )}
@@ -116,7 +123,7 @@ export default function KurirCodPage() {
       ))}
 
       {pending?.length === 0 && (
-        <p className="text-center text-sm text-muted-foreground">Tidak ada setoran pending.</p>
+        <EmptyState icon={Wallet} title="Tidak ada setoran pending" description="Semua COD sudah beres." />
       )}
     </div>
   );

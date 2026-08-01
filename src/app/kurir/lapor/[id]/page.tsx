@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { CheckCircle2, XCircle, HandCoins, MapPin, Camera, Zap } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { enqueueDeliveryAttempt } from "@/lib/offline/offlineQueue";
 import { CapStempel } from "@/components/cap-stempel";
@@ -15,9 +16,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 const RESULTS = [
-  { value: "BERHASIL", label: "Berhasil" },
-  { value: "GAGAL", label: "Gagal" },
-  { value: "DITITIP_PIHAK_KETIGA", label: "Titip Pihak Ketiga" },
+  { value: "BERHASIL", label: "Berhasil", icon: CheckCircle2 },
+  { value: "GAGAL", label: "Gagal", icon: XCircle },
+  { value: "DITITIP_PIHAK_KETIGA", label: "Titip Pihak Ketiga", icon: HandCoins },
 ] as const;
 
 interface ResiSummary {
@@ -106,27 +107,35 @@ export default function LaporDeliveryPage({ params }: { params: Promise<{ id: st
         <CardHeader>
           <CardTitle className="font-heading">{resi?.noResi ?? resiId}</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          {resi?.recipientName} — {resi?.recipientAddress}
+        <CardContent className="flex items-start gap-1.5 text-sm text-muted-foreground">
+          <MapPin className="mt-0.5 size-3.5 shrink-0" />
+          <span>
+            {resi?.recipientName} — {resi?.recipientAddress}
+          </span>
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-3 gap-2">
-        {RESULTS.map((r) => (
-          <button
-            key={r.value}
-            type="button"
-            onClick={() => setResult(r.value)}
-            className={cn(
-              "rounded-lg border py-4 text-sm font-medium",
-              result === r.value
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-card text-foreground",
-            )}
-          >
-            {r.label}
-          </button>
-        ))}
+        {RESULTS.map((r) => {
+          const Icon = r.icon;
+          const active = result === r.value;
+          return (
+            <button
+              key={r.value}
+              type="button"
+              onClick={() => setResult(r.value)}
+              className={cn(
+                "flex flex-col items-center gap-1.5 rounded-lg border py-4 text-xs font-medium",
+                active
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card text-foreground",
+              )}
+            >
+              <Icon className="size-5" />
+              {r.label}
+            </button>
+          );
+        })}
       </div>
 
       {result === "BERHASIL" && (
@@ -144,7 +153,10 @@ export default function LaporDeliveryPage({ params }: { params: Promise<{ id: st
       )}
 
       <div className="flex flex-col gap-2">
-        <Label>Bukti Foto</Label>
+        <Label className="flex items-center gap-1.5">
+          <Camera className="size-3.5" />
+          Bukti Foto
+        </Label>
         <Input
           type="file"
           accept="image/*"
@@ -160,11 +172,12 @@ export default function LaporDeliveryPage({ params }: { params: Promise<{ id: st
 
       <Button
         size="lg"
-        className="mt-2 h-14 text-base"
+        className="mt-2 h-14 gap-2 text-base"
         disabled={mutation.isPending || !courierId}
         onClick={() => mutation.mutate()}
       >
-        {mutation.isPending ? "Mengirim..." : "⚡ Lapor"}
+        <Zap className="size-5 fill-current" />
+        {mutation.isPending ? "Mengirim..." : "Lapor"}
       </Button>
     </div>
   );

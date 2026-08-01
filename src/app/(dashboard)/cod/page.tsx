@@ -3,9 +3,12 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Wallet, HandCoins } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { Money } from "@/components/money";
 import { CapStempel } from "@/components/cap-stempel";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,16 +81,14 @@ export default function CodPage() {
   return (
     <div className="flex flex-col gap-6">
       <CapStempel show={stamp} label="Lunas" onDone={() => setStamp(false)} />
-      <div>
-        <h1 className="font-heading text-2xl font-bold">COD</h1>
-        <p className="text-muted-foreground">
-          Setoran wajib kurir = nilai COD − ongkir − komisi.
-        </p>
-      </div>
+      <PageHeader icon={Wallet} title="COD" description="Setoran wajib kurir = nilai COD − ongkir − komisi." />
 
       <Card>
         <CardHeader>
-          <CardTitle>Setor Uang COD</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <HandCoins className="size-4 text-muted-foreground" />
+            Setor Uang COD
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form
@@ -111,7 +112,8 @@ export default function CodPage() {
               />
             </div>
             <div className="flex items-end">
-              <Button type="submit" disabled={mutation.isPending} className="w-full">
+              <Button type="submit" disabled={mutation.isPending} className="w-full gap-1.5">
+                <HandCoins className="size-4" />
                 {mutation.isPending ? "Menyimpan..." : "Setor"}
               </Button>
             </div>
@@ -121,11 +123,17 @@ export default function CodPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Daftar COD</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Wallet className="size-4 text-muted-foreground" />
+            Daftar COD
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading && <p className="text-sm text-muted-foreground">Memuat...</p>}
-          {data && (
+          {data && data.data.length === 0 && (
+            <EmptyState icon={Wallet} title="Belum ada data COD" description="Data COD akan muncul setelah delivery attempt berhasil." />
+          )}
+          {data && data.data.length > 0 && (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -154,13 +162,6 @@ export default function CodPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {data.data.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      Belum ada data COD.
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           )}

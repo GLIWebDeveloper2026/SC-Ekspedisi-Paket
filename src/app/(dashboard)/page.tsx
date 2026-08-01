@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LayoutDashboard, Package, Boxes, AlertTriangle, Clock, Undo2, type LucideIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -10,6 +11,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Money } from "@/components/money";
+import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
 import { prisma } from "@/lib/db";
 import { RemitStatus, CustodyEventType } from "@prisma/client";
 import { resolveLastCustody } from "@/lib/business/resolveLastCustody";
@@ -60,12 +63,22 @@ export default async function DashboardHomePage() {
       resolveLastCustody(r.custodyEvents)?.eventType !== CustodyEventType.TERKIRIM,
   ).length;
 
-  const stats = [
-    { label: "Total Resi", value: resiCount, alert: false },
-    { label: "Total Karung", value: sackCount, alert: false },
-    { label: "Diskrepansi Setoran COD", value: codDiscrepancyCount, alert: codDiscrepancyCount > 0 },
-    { label: "Kandidat Retur (>7 hari)", value: pendingReturnCount, alert: pendingReturnCount > 0 },
-    { label: "Total Retur", value: returnCount, alert: false },
+  const stats: { label: string; value: number; alert: boolean; icon: LucideIcon }[] = [
+    { label: "Total Resi", value: resiCount, alert: false, icon: Package },
+    { label: "Total Karung", value: sackCount, alert: false, icon: Boxes },
+    {
+      label: "Diskrepansi Setoran COD",
+      value: codDiscrepancyCount,
+      alert: codDiscrepancyCount > 0,
+      icon: AlertTriangle,
+    },
+    {
+      label: "Kandidat Retur (>7 hari)",
+      value: pendingReturnCount,
+      alert: pendingReturnCount > 0,
+      icon: Clock,
+    },
+    { label: "Total Retur", value: returnCount, alert: false, icon: Undo2 },
   ];
 
   const resiRows = recentResi.map((r) => {
@@ -87,32 +100,51 @@ export default async function DashboardHomePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Ringkasan operasional Kilat Nusantara</p>
-      </div>
+      <PageHeader
+        icon={LayoutDashboard}
+        title="Dashboard"
+        description="Ringkasan operasional Kilat Nusantara"
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {stats.map((s) => (
-          <Card key={s.label}>
-            <CardHeader>
-              <CardDescription>{s.label}</CardDescription>
-              <CardTitle
-                className={`font-mono text-3xl tabular-nums ${s.alert ? "text-stempel" : ""}`}
-              >
-                {s.value}
-              </CardTitle>
-            </CardHeader>
-            <CardContent />
-          </Card>
-        ))}
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <Card key={s.label}>
+              <CardHeader className="flex-row items-start justify-between space-y-0">
+                <div>
+                  <CardDescription>{s.label}</CardDescription>
+                  <CardTitle
+                    className={`font-mono text-3xl tabular-nums ${s.alert ? "text-stempel" : ""}`}
+                  >
+                    {s.value}
+                  </CardTitle>
+                </div>
+                <div
+                  className={`flex size-9 shrink-0 items-center justify-center rounded-full ${
+                    s.alert ? "bg-stempel/10 text-stempel" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  <Icon className="size-4" />
+                </div>
+              </CardHeader>
+              <CardContent />
+            </Card>
+          );
+        })}
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Resi Terbaru</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="size-4 text-muted-foreground" />
+            Resi Terbaru
+          </CardTitle>
         </CardHeader>
         <CardContent>
+          {resiRows.length === 0 ? (
+            <EmptyState icon={Package} title="Belum ada resi" description="Resi yang baru dibuat akan muncul di sini." />
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -145,15 +177,9 @@ export default async function DashboardHomePage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {resiRows.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    Belum ada resi.
-                  </TableCell>
-                </TableRow>
-              )}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
     </div>

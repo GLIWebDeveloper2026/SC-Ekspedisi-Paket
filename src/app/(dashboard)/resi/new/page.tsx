@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { PackagePlus, User, MapPin, Ruler, Wallet } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+function SectionLabel({ icon: Icon, children }: { icon: typeof User; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase sm:col-span-2">
+      <Icon className="size-3.5" />
+      {children}
+    </div>
+  );
+}
 
 interface Agent {
   id: string;
@@ -89,7 +99,12 @@ export default function NewResiPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="font-heading mb-6 text-2xl font-bold">Buat Resi Baru</h1>
+      <div className="mb-6 flex items-center gap-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-terpal/10 text-terpal">
+          <PackagePlus className="size-5" />
+        </div>
+        <h1 className="font-heading text-2xl font-bold">Buat Resi Baru</h1>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Detail Resi</CardTitle>
@@ -102,6 +117,7 @@ export default function NewResiPage() {
               mutation.mutate();
             }}
           >
+            <SectionLabel icon={MapPin}>Rute</SectionLabel>
             <div className="flex flex-col gap-2">
               <Label>Agen Asal</Label>
               <Select value={form.originAgentId} onValueChange={(v) => update("originAgentId", v ?? "")}>
@@ -137,6 +153,7 @@ export default function NewResiPage() {
               </Select>
             </div>
 
+            <SectionLabel icon={User}>Pengirim & Penerima</SectionLabel>
             <div className="flex flex-col gap-2">
               <Label>Nama Pengirim</Label>
               <Input required value={form.senderName} onChange={(e) => update("senderName", e.target.value)} />
@@ -162,6 +179,7 @@ export default function NewResiPage() {
               />
             </div>
 
+            <SectionLabel icon={Ruler}>Layanan & Dimensi</SectionLabel>
             <div className="flex flex-col gap-2">
               <Label>Jenis Layanan</Label>
               <Select
@@ -219,6 +237,7 @@ export default function NewResiPage() {
               />
             </div>
 
+            <SectionLabel icon={Wallet}>Pembayaran</SectionLabel>
             <div className="flex items-center gap-2 sm:col-span-2">
               <input
                 id="isCod"
@@ -241,7 +260,8 @@ export default function NewResiPage() {
             )}
 
             <div className="sm:col-span-2">
-              <Button type="submit" disabled={mutation.isPending} className="w-full">
+              <Button type="submit" disabled={mutation.isPending} className="w-full gap-1.5">
+                <PackagePlus className="size-4" />
                 {mutation.isPending ? "Menyimpan..." : "Buat Resi"}
               </Button>
             </div>

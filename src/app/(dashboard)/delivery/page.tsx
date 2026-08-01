@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Truck, ClipboardList, PackageSearch } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { CapStempel } from "@/components/cap-stempel";
+import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,16 +99,18 @@ export default function DeliveryAttemptsPage() {
   return (
     <div className="flex flex-col gap-6">
       <CapStempel show={stamp} label="Terkirim" onDone={() => setStamp(false)} />
-      <div>
-        <h1 className="font-heading text-2xl font-bold">Delivery Attempt</h1>
-        <p className="text-muted-foreground">
-          3x gagal berturut-turut otomatis memicu retur ke gudang.
-        </p>
-      </div>
+      <PageHeader
+        icon={Truck}
+        title="Delivery Attempt"
+        description="3x gagal berturut-turut otomatis memicu retur ke gudang."
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle>Catat Percobaan Antar</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <ClipboardList className="size-4 text-muted-foreground" />
+            Catat Percobaan Antar
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form
@@ -197,7 +201,8 @@ export default function DeliveryAttemptsPage() {
             </div>
 
             <div className="sm:col-span-2">
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button type="submit" disabled={mutation.isPending} className="gap-1.5">
+                <Truck className="size-4" />
                 {mutation.isPending ? "Menyimpan..." : "Catat Percobaan"}
               </Button>
             </div>
@@ -208,7 +213,10 @@ export default function DeliveryAttemptsPage() {
       {resiOptions && (
         <Card>
           <CardHeader>
-            <CardTitle>Resi Terbaru</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <PackageSearch className="size-4 text-muted-foreground" />
+              Resi Terbaru
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Table>

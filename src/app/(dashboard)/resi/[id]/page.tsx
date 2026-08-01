@@ -3,6 +3,21 @@
 import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import {
+  Package,
+  MapPin,
+  History,
+  UserCircle2,
+  Plus,
+  Boxes,
+  Warehouse,
+  Truck,
+  ArrowRightLeft,
+  CheckCircle2,
+  Undo2,
+  CircleDot,
+  type LucideIcon,
+} from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { EmptyState } from "@/components/empty-state";
 import {
   Select,
   SelectContent,
@@ -17,6 +33,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+const EVENT_ICONS: Record<string, LucideIcon> = {
+  DIBUAT_DI_LOKET: Package,
+  MASUK_KARUNG: Boxes,
+  KELUAR_KARUNG: Boxes,
+  MASUK_GUDANG: Warehouse,
+  KELUAR_GUDANG: Warehouse,
+  DISERAHKAN_KE_KURIR: Truck,
+  DIOPER_KE_KURIR_LAIN: ArrowRightLeft,
+  DELIVERY_ATTEMPT: Truck,
+  TERKIRIM: CheckCircle2,
+  RETUR_KE_GUDANG: Undo2,
+  RETUR_KE_PENGIRIM: Undo2,
+};
 
 const CUSTODY_EVENT_TYPES = [
   "MASUK_KARUNG",
@@ -98,17 +128,25 @@ export default function ResiDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-bold">{resi.noResi}</h1>
-        <p className="text-muted-foreground">
-          {resi.senderName} → {resi.recipientName}
-        </p>
+      <div className="flex items-center gap-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-terpal/10 text-terpal">
+          <Package className="size-5" />
+        </div>
+        <div>
+          <h1 className="font-heading text-2xl font-bold">{resi.noResi}</h1>
+          <p className="text-muted-foreground">
+            {resi.senderName} → {resi.recipientName}
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Rincian Ongkir</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="size-4 text-muted-foreground" />
+              Rincian Ongkir
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2 text-sm">
             <Row label="Layanan" value={resi.serviceType} />
@@ -120,21 +158,38 @@ export default function ResiDetailPage({ params }: { params: Promise<{ id: strin
             {resi.isCod && (
               <Row label="Nilai COD" value={`Rp${resi.nilaiCod?.toLocaleString("id-ID")}`} mono />
             )}
-            <Row label="Alamat Penerima" value={resi.recipientAddress} />
+            <div className="flex justify-between gap-4">
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <MapPin className="size-3.5 shrink-0" />
+                Alamat Penerima
+              </span>
+              <span className="text-right">{resi.recipientAddress}</span>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Pemegang Terakhir</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <UserCircle2 className="size-4 text-muted-foreground" />
+              Pemegang Terakhir
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {custody?.currentHolder ? (
-              <div className="flex flex-col gap-1">
-                <Badge>{custody.currentHolder.eventType}</Badge>
-                <p className="text-sm text-muted-foreground">
-                  Di: {custody.currentHolder.toEntity ?? "-"}
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-terpal/10 text-terpal">
+                  {(() => {
+                    const Icon = EVENT_ICONS[custody.currentHolder.eventType] ?? CircleDot;
+                    return <Icon className="size-4.5" />;
+                  })()}
+                </div>
+                <div>
+                  <Badge>{custody.currentHolder.eventType}</Badge>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Di: {custody.currentHolder.toEntity ?? "-"}
+                  </p>
+                </div>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">Belum ada event kustodi.</p>
@@ -145,29 +200,47 @@ export default function ResiDetailPage({ params }: { params: Promise<{ id: strin
 
       <Card>
         <CardHeader>
-          <CardTitle>Riwayat Kustodi</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <History className="size-4 text-muted-foreground" />
+            Riwayat Kustodi
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <ol className="flex flex-col gap-3">
-            {custody?.history.map((h, i) => (
-              <li key={i} className="border-l-2 border-primary pl-4">
-                <p className="text-sm font-medium">{h.eventType}</p>
-                <p className="text-xs text-muted-foreground">
-                  {new Date(h.timestamp).toLocaleString("id-ID")} {h.toEntity ? `→ ${h.toEntity}` : ""}
-                </p>
-                {h.notes && <p className="text-xs text-muted-foreground">{h.notes}</p>}
-              </li>
-            ))}
-            {(!custody || custody.history.length === 0) && (
-              <p className="text-sm text-muted-foreground">Belum ada riwayat.</p>
-            )}
-          </ol>
+          {!custody || custody.history.length === 0 ? (
+            <EmptyState icon={History} title="Belum ada riwayat" description="Event kustodi akan muncul di sini." />
+          ) : (
+            <ol className="flex flex-col gap-4">
+              {custody.history.map((h, i) => {
+                const Icon = EVENT_ICONS[h.eventType] ?? CircleDot;
+                return (
+                  <li key={i} className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-terpal/10 text-terpal">
+                        <Icon className="size-4" />
+                      </div>
+                      {i < custody.history.length - 1 && <div className="mt-1 w-px flex-1 bg-border" />}
+                    </div>
+                    <div className="pb-1">
+                      <p className="text-sm font-medium">{h.eventType}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(h.timestamp).toLocaleString("id-ID")} {h.toEntity ? `→ ${h.toEntity}` : ""}
+                      </p>
+                      {h.notes && <p className="text-xs text-muted-foreground">{h.notes}</p>}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Tambah Event Kustodi</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="size-4 text-muted-foreground" />
+            Tambah Event Kustodi
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form
