@@ -34,5 +34,11 @@ export default async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest).*)"],
+  // Aset statis di public/ (logo, background, ikon) HARUS bisa diakses tanpa
+  // login — kalau tidak dikecualikan di sini, request gambarnya sendiri kena
+  // redirect ke /login (jadi <img> nunjuk ke halaman HTML, bukan gambar),
+  // dan itu tepatnya yang bikin logo/background halaman login sendiri patah.
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|.*\\.(?:png|jpg|jpeg|svg|webp|gif|ico)$).*)",
+  ],
 };
