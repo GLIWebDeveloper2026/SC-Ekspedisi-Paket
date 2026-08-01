@@ -15,6 +15,7 @@ export const GET = withApiErrorHandling(async () => {
     data: collections.map((c) => ({
       resiId: c.resiId,
       noResi: c.resi.noResi,
+      courierId: c.courierId,
       courierName: c.courier.name,
       collectedAmount: Number(c.collectedAmount),
       komisiPercent: Number(c.komisiPercent),

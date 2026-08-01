@@ -54,6 +54,14 @@ export const POST = withApiErrorHandling(async (req) => {
     throw new ApiError("NOT_FOUND", "Resi tidak ditemukan", 404);
   }
 
+  // Kurir adalah User biasa (role KURIR), bukan tabel Courier terpisah — jadi
+  // courierId di sini WAJIB divalidasi merujuk ke User aktif dengan role KURIR
+  // sebelum dipakai sebagai FK (lihat docs/11-KELOLA-AKUN-DAN-AUTH.md).
+  const courier = await prisma.user.findUnique({ where: { id: input.courierId } });
+  if (!courier || courier.role !== Role.KURIR || !courier.isActive) {
+    throw new ApiError("VALIDATION_ERROR", "courierId tidak merujuk ke kurir aktif", 400);
+  }
+
   const pastAttempts = await prisma.deliveryAttempt.findMany({
     where: { resiId: input.resiId },
     orderBy: { attemptNumber: "asc" },

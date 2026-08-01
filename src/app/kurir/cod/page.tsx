@@ -1,39 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
-import { useCourierId } from "@/lib/offline/use-courier-id";
 import { enqueueCodRemit } from "@/lib/offline/offlineQueue";
 import { CapStempel } from "@/components/cap-stempel";
-import { CourierPicker } from "@/components/kurir/courier-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Money } from "@/components/money";
 
-interface CourierOption {
-  id: string;
-  name: string;
-}
 interface CodItem {
   resiId: string;
   noResi: string;
-  courierName: string;
+  courierId: string;
   expectedRemit: number;
   remitStatus: "PENDING" | "REMITTED" | "DISCREPANCY";
 }
 
 export default function KurirCodPage() {
-  const { courierId, hydrated } = useCourierId();
-  const { data: couriers } = useQuery({
-    queryKey: ["courier-options"],
-    queryFn: () => apiFetch<{ data: CourierOption[] }>("/api/couriers"),
-    enabled: !!courierId,
-  });
-  const courierName = couriers?.data.find((c) => c.id === courierId)?.name;
+  const { data: session } = useSession();
+  const courierId = session?.user?.id;
 
   const { data: codList } = useQuery({
     queryKey: ["kurir-cod-list"],
@@ -42,7 +32,7 @@ export default function KurirCodPage() {
   });
 
   const pending = codList?.data.filter(
-    (c) => c.courierName === courierName && c.remitStatus !== "REMITTED",
+    (c) => c.courierId === courierId && c.remitStatus !== "REMITTED",
   );
 
   const [activeResiId, setActiveResiId] = useState<string | null>(null);
@@ -52,10 +42,11 @@ export default function KurirCodPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       const resiId = activeResiId!;
+      const noResi = pending?.find((c) => c.resiId === resiId)?.noResi ?? resiId;
       const amount = Number(remitAmount);
 
       if (!navigator.onLine) {
-        await enqueueCodRemit({ resiId, noResi: resiId, remitAmount: amount });
+        await enqueueCodRemit({ resiId, noResi, remitAmount: amount });
         return { mode: "offline" as const };
       }
 
@@ -66,7 +57,7 @@ export default function KurirCodPage() {
         });
         return { mode: "online" as const, remitStatus: res.remitStatus };
       } catch {
-        await enqueueCodRemit({ resiId, noResi: resiId, remitAmount: amount });
+        await enqueueCodRemit({ resiId, noResi, remitAmount: amount });
         return { mode: "offline" as const };
       }
     },
@@ -82,9 +73,6 @@ export default function KurirCodPage() {
     },
     onError: (err: Error) => toast.error(err.message),
   });
-
-  if (!hydrated) return null;
-  if (!courierId) return <CourierPicker />;
 
   return (
     <div className="flex flex-col gap-3">

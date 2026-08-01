@@ -2,10 +2,10 @@
 
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
-import { useCourierId } from "@/lib/offline/use-courier-id";
 import { enqueueDeliveryAttempt } from "@/lib/offline/offlineQueue";
 import { CapStempel } from "@/components/cap-stempel";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,8 @@ type SubmitOutcome = { mode: "online" } | { mode: "offline" };
 export default function LaporDeliveryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: resiId } = use(params);
   const router = useRouter();
-  const { courierId } = useCourierId();
+  const { data: session } = useSession();
+  const courierId = session?.user?.id;
 
   const { data: resi } = useQuery({
     queryKey: ["kurir-resi", resiId],

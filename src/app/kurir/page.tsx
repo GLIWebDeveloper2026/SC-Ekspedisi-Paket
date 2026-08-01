@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
-import { useCourierId } from "@/lib/offline/use-courier-id";
-import { CourierPicker } from "@/components/kurir/courier-picker";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -17,18 +15,10 @@ interface ResiListItem {
 }
 
 export default function KurirResiPage() {
-  const { courierId, hydrated } = useCourierId();
   const { data, isLoading } = useQuery({
     queryKey: ["kurir-resi-options"],
     queryFn: () => apiFetch<{ data: ResiListItem[] }>("/api/resi"),
-    enabled: !!courierId,
   });
-
-  if (!hydrated) return null;
-
-  if (!courierId) {
-    return <CourierPicker />;
-  }
 
   return (
     <div className="flex flex-col gap-3">
