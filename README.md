@@ -8,10 +8,9 @@ Dokumen analisis bisnis lengkap (PRD, arsitektur, skema database, API contract, 
 
 ## Anggota Tim
 
-- [Nama Anggota 1] — [role/pembagian tugas]
-- [Nama Anggota 2] — [role/pembagian tugas]
-- [Nama Anggota 3] — [role/pembagian tugas]
-- [Nama Anggota 4] — [role/pembagian tugas]
+- Mochamed Fadhlan Tuhairi — 1122140146
+- Muhammad Habib Alghifari— 1122140152
+- Wildan Thoha — 1122140007
 
 ## Tech Stack
 
