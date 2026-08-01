@@ -5,7 +5,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const session = await auth();
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-dvh overflow-hidden">
       {session?.user && (
         <SidebarNav userName={session.user.name ?? session.user.email ?? ""} userRole={session.user.role} />
       )}

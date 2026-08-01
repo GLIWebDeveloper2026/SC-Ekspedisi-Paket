@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { PackagePlus, User, MapPin, Ruler, Wallet } from "lucide-react";
+import { PackagePlus, User, MapPin, Ruler, Wallet, PackageSearch } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/searchable-select";
 import {
@@ -43,11 +45,19 @@ interface CreateResiResponse {
   noResi: string;
   totalOngkir: number;
 }
+interface OngkirPreview {
+  beratTertagihKg: number;
+  biayaDasar: number;
+  biayaZona: number;
+  totalOngkir: number;
+}
 
 const SERVICE_TYPES = ["REGULER", "KILAT", "KARGO"] as const;
 
 export default function NewResiPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const isPetugasLoket = session?.user?.role === "PETUGAS_LOKET";
 
   const { data: agents } = useQuery({
     queryKey: ["agents"],
@@ -72,7 +82,18 @@ export default function NewResiPage() {
     tinggiCm: "",
     isCod: false,
     nilaiCod: "",
+    itemDescription: "",
+    isFragile: false,
   });
+
+  function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  // Petugas Loket cuma boleh bikin resi atas nama agennya sendiri — kunci
+  // field-nya (turunan dari session, bukan state sendiri) supaya dia tidak
+  // bisa pilih agen lain. Server juga menegakkan ini secara independen.
+  const originAgentId = isPetugasLoket ? (session?.user?.agentId ?? "") : form.originAgentId;
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -80,6 +101,7 @@ export default function NewResiPage() {
         method: "POST",
         body: JSON.stringify({
           ...form,
+          originAgentId,
           beratAktualKg: Number(form.beratAktualKg),
           panjangCm: Number(form.panjangCm),
           lebarCm: Number(form.lebarCm),
@@ -94,9 +116,30 @@ export default function NewResiPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
-    setForm((f) => ({ ...f, [key]: value }));
-  }
+  const previewInput = {
+    destinationDistrictId: form.destinationDistrictId,
+    serviceType: form.serviceType,
+    beratAktualKg: Number(form.beratAktualKg),
+    panjangCm: Number(form.panjangCm),
+    lebarCm: Number(form.lebarCm),
+    tinggiCm: Number(form.tinggiCm),
+  };
+  const previewReady =
+    !!previewInput.destinationDistrictId &&
+    previewInput.beratAktualKg > 0 &&
+    previewInput.panjangCm > 0 &&
+    previewInput.lebarCm > 0 &&
+    previewInput.tinggiCm > 0;
+
+  const { data: preview, isFetching: previewLoading } = useQuery({
+    queryKey: ["resi-ongkir-preview", previewInput],
+    queryFn: () =>
+      apiFetch<OngkirPreview>("/api/resi/preview", {
+        method: "POST",
+        body: JSON.stringify(previewInput),
+      }),
+    enabled: previewReady,
+  });
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -123,13 +166,19 @@ export default function NewResiPage() {
               <Label>Agen Asal</Label>
               <SearchableSelect
                 placeholder="Pilih agen"
-                value={form.originAgentId}
+                value={originAgentId}
                 onValueChange={(v) => update("originAgentId", v)}
                 options={(agents?.data ?? []).map((a) => ({
                   id: a.id,
                   label: `${a.name} (${a.districtName})`,
                 }))}
+                disabled={isPetugasLoket}
               />
+              {isPetugasLoket && (
+                <p className="text-xs text-muted-foreground">
+                  Resi selalu dibuat atas nama agenmu sendiri.
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col gap-2">
@@ -229,13 +278,30 @@ export default function NewResiPage() {
               />
             </div>
 
+            <SectionLabel icon={PackageSearch}>Isi Paket</SectionLabel>
+            <div className="flex flex-col gap-2">
+              <Label>Keterangan Barang</Label>
+              <Input
+                value={form.itemDescription}
+                onChange={(e) => update("itemDescription", e.target.value)}
+                placeholder="mis. Bantal, kaca, dokumen..."
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="isFragile"
+                checked={form.isFragile}
+                onCheckedChange={(v) => update("isFragile", v === true)}
+              />
+              <Label htmlFor="isFragile">Mudah Pecah / Fragile</Label>
+            </div>
+
             <SectionLabel icon={Wallet}>Pembayaran</SectionLabel>
             <div className="flex items-center gap-2 sm:col-span-2">
-              <input
+              <Checkbox
                 id="isCod"
-                type="checkbox"
                 checked={form.isCod}
-                onChange={(e) => update("isCod", e.target.checked)}
+                onCheckedChange={(v) => update("isCod", v === true)}
               />
               <Label htmlFor="isCod">Bayar di Tempat (COD)</Label>
             </div>
@@ -248,6 +314,40 @@ export default function NewResiPage() {
                   value={form.nilaiCod}
                   onChange={(e) => update("nilaiCod", e.target.value)}
                 />
+              </div>
+            )}
+
+            {previewReady && (
+              <div className="rounded-lg border bg-muted/40 p-4 text-sm sm:col-span-2">
+                {previewLoading && <p className="text-muted-foreground">Menghitung ongkir...</p>}
+                {preview && (
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Berat Tertagih</span>
+                      <span className="font-mono tabular-nums">{preview.beratTertagihKg} kg</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Biaya Dasar</span>
+                      <span className="font-mono tabular-nums">
+                        Rp{preview.biayaDasar.toLocaleString("id-ID")}
+                      </span>
+                    </div>
+                    {preview.biayaZona > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Biaya Zona Jauh</span>
+                        <span className="font-mono tabular-nums">
+                          Rp{preview.biayaZona.toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                    )}
+                    <div className="mt-1 flex justify-between border-t pt-1.5 font-semibold">
+                      <span>Total Ongkir</span>
+                      <span className="font-mono tabular-nums">
+                        Rp{preview.totalOngkir.toLocaleString("id-ID")}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

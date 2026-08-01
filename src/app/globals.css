@@ -63,47 +63,51 @@
  * Latar kertas manifest, tenang, dioptimalkan untuk baca angka lama.
  */
 :root {
-  --ink: #211e1a;
-  --paper: #eae6db;
-  --paper-muted: #ddd8c9;
-  --stempel: #b23a2c;
-  --terpal: #1f5c73;
-  --night: #17191b;
-  --night-text: #edeae3;
-  --lampu-natrium: #e8a33d;
+  /* Palet "Ultra Express" — Lightning Yellow + Dark Obsidian + Rush Red.
+     Nama token domain (--terpal/--stempel/--lampu-natrium/dst) dipertahankan
+     supaya semua komponen yang sudah pakai token ini tidak perlu diubah —
+     cukup ganti nilai hex-nya di sini. */
+  --ink: #0f172a;
+  --paper: #f8fafc;
+  --paper-muted: #e2e8f0;
+  --stempel: #ff3b30;
+  --terpal: #0f172a;
+  --night: #0f172a;
+  --night-text: #f8fafc;
+  --lampu-natrium: #ffc700;
 
   --background: var(--paper);
   --foreground: var(--ink);
-  --card: #f2f0e7;
+  --card: #ffffff;
   --card-foreground: var(--ink);
-  --popover: #f2f0e7;
+  --popover: #ffffff;
   --popover-foreground: var(--ink);
   --primary: var(--terpal);
-  --primary-foreground: #f5f3ec;
+  --primary-foreground: #ffffff;
   --secondary: var(--paper-muted);
   --secondary-foreground: var(--ink);
   --muted: var(--paper-muted);
-  --muted-foreground: #6b6656;
+  --muted-foreground: #64748b;
   --accent: var(--paper-muted);
   --accent-foreground: var(--ink);
   --destructive: var(--stempel);
-  --border: #c9c3b2;
-  --input: #c9c3b2;
-  --ring: var(--terpal);
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: var(--lampu-natrium);
   --chart-1: var(--terpal);
   --chart-2: var(--lampu-natrium);
   --chart-3: var(--stempel);
-  --chart-4: #6b6656;
+  --chart-4: #64748b;
   --chart-5: var(--ink);
   --radius: 0.5rem;
-  --sidebar: #e2ded1;
-  --sidebar-foreground: var(--ink);
-  --sidebar-primary: var(--terpal);
-  --sidebar-primary-foreground: #f5f3ec;
-  --sidebar-accent: var(--paper-muted);
-  --sidebar-accent-foreground: var(--ink);
-  --sidebar-border: #c9c3b2;
-  --sidebar-ring: var(--terpal);
+  --sidebar: var(--night);
+  --sidebar-foreground: var(--night-text);
+  --sidebar-primary: var(--lampu-natrium);
+  --sidebar-primary-foreground: #201502;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: var(--night-text);
+  --sidebar-border: #1e293b;
+  --sidebar-ring: var(--lampu-natrium);
 }
 
 /*

@@ -7,6 +7,7 @@ import { Truck, ClipboardList, PackageSearch } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { CapStempel } from "@/components/cap-stempel";
 import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 import { SearchableSelect } from "@/components/searchable-select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,7 @@ export default function DeliveryAttemptsPage() {
   const queryClient = useQueryClient();
   const { data: resiOptions } = useQuery({
     queryKey: ["resi-options"],
-    queryFn: () => apiFetch<{ data: ResiOption[] }>("/api/resi"),
+    queryFn: () => apiFetch<{ items: ResiOption[] }>("/api/resi?pageSize=100"),
   });
   const { data: courierOptions } = useQuery({
     queryKey: ["courier-options"],
@@ -127,7 +128,7 @@ export default function DeliveryAttemptsPage() {
                 placeholder="Pilih resi"
                 value={resiId}
                 onValueChange={setResiId}
-                options={(resiOptions?.data ?? []).map((r) => ({ id: r.id, label: r.noResi }))}
+                options={(resiOptions?.items ?? []).map((r) => ({ id: r.id, label: r.noResi }))}
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -208,22 +209,26 @@ export default function DeliveryAttemptsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>No Resi</TableHead>
-                  <TableHead>Resi Id</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {resiOptions.data.slice(0, 10).map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell>{r.noResi}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.id}</TableCell>
+            {resiOptions.items.length === 0 ? (
+              <EmptyState icon={PackageSearch} title="Belum ada resi" description="Resi yang dibuat di loket akan muncul di sini." />
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>No Resi</TableHead>
+                    <TableHead>Resi Id</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {resiOptions.items.slice(0, 10).map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>{r.noResi}</TableCell>
+                      <TableCell className="font-mono text-xs">{r.id}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       )}

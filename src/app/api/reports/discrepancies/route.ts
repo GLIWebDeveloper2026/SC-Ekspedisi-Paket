@@ -3,6 +3,8 @@ import { CustodyEventType, RemitStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { requireAuth, withApiErrorHandling } from "@/lib/api-utils";
+import { detectSackDiscrepancy } from "@/lib/business/detectSackDiscrepancy";
+import { resolveUserNames } from "@/lib/resolve-user-names";
 
 export const GET = withApiErrorHandling(async () => {
   await requireAuth();
@@ -17,23 +19,29 @@ export const GET = withApiErrorHandling(async () => {
     const resiIds = sack.items.map((i) => i.resiId);
     if (resiIds.length === 0) continue;
 
-    const arrivedEvents = await prisma.packageCustodyEvent.findMany({
-      where: { resiId: { in: resiIds }, eventType: CustodyEventType.MASUK_GUDANG },
-      select: { resiId: true },
-      distinct: ["resiId"],
+    const events = await prisma.packageCustodyEvent.findMany({
+      where: {
+        resiId: { in: resiIds },
+        eventType: { in: [CustodyEventType.MASUK_GUDANG, CustodyEventType.DIANGKUT_KE_GUDANG] },
+      },
     });
-    const arrivedCount = arrivedEvents.length;
 
-    if (arrivedCount !== resiIds.length) {
+    const missingResi = detectSackDiscrepancy(resiIds, events);
+    if (missingResi.length > 0) {
+      const noResiByResiId = new Map(sack.items.map((i) => [i.resiId, i.resi.noResi]));
+      const nameByUserId = await resolveUserNames(missingResi.map((m) => m.pemegangTerakhir));
       sackDiscrepancies.push({
         sackId: sack.id,
         originInfo: sack.originInfo,
         destinationInfo: sack.destinationInfo,
         expectedCount: resiIds.length,
-        arrivedCount,
-        missingResi: sack.items
-          .filter((i) => !arrivedEvents.some((e) => e.resiId === i.resiId))
-          .map((i) => ({ resiId: i.resiId, noResi: i.resi.noResi })),
+        arrivedCount: resiIds.length - missingResi.length,
+        missingResi: missingResi.map((m) => ({
+          resiId: m.resiId,
+          noResi: noResiByResiId.get(m.resiId) ?? null,
+          pemegangTerakhir: nameByUserId.get(m.pemegangTerakhir) ?? m.pemegangTerakhir,
+          waktuTerakhirTercatat: m.waktuTerakhirTercatat,
+        })),
       });
     }
   }

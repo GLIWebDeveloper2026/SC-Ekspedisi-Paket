@@ -21,8 +21,8 @@ interface ResiListItem {
 
 export default function KurirResiPage() {
   const { data, isLoading } = useQuery({
-    queryKey: ["kurir-resi-options"],
-    queryFn: () => apiFetch<{ data: ResiListItem[] }>("/api/resi"),
+    queryKey: ["kurir-my-tasks"],
+    queryFn: () => apiFetch<{ data: ResiListItem[] }>("/api/kurir/me/tasks"),
   });
 
   const [search, setSearch] = useState("");
@@ -35,7 +35,7 @@ export default function KurirResiPage() {
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">
-        {isLoading ? "Memuat..." : `Hari ini: ${data?.data.length ?? 0} resi`}
+        {isLoading ? "Memuat..." : `Tugas hari ini: ${data?.data.length ?? 0} resi`}
       </p>
 
       {!isLoading && (data?.data.length ?? 0) > 0 && (

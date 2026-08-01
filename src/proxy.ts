@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 
-const PUBLIC_ROUTES = ["/login"];
+// Rute yang tidak butuh login sama sekali. "/track" (pelacakan publik) sengaja
+// masuk sini — orang luar (pengirim/penerima) harus bisa akses tanpa akun.
+const PUBLIC_ROUTES = ["/login", "/track"];
 
 export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -16,7 +18,9 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (session?.user && isPublicRoute) {
+  // Cuma /login yang harus dijauhi kalau sudah login — /track tetap boleh
+  // dibuka staff yang sedang login juga (bukan cuma orang luar).
+  if (session?.user && pathname.startsWith("/login")) {
     return NextResponse.redirect(new URL("/", req.nextUrl.origin));
   }
 

@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# claude code local settings
+.claude/settings.local.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
@@ -45,3 +48,5 @@ docs/*
 # serwist (generated service worker)
 /public/sw.js
 /public/sw.js.map
+
+.vercel

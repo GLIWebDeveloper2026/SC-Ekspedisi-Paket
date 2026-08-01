@@ -1,14 +1,13 @@
 "use client";
 
-import { use, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { use } from "react";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
   Package,
   MapPin,
   History,
   UserCircle2,
-  Plus,
   Boxes,
   Warehouse,
   Truck,
@@ -16,6 +15,8 @@ import {
   CheckCircle2,
   Undo2,
   CircleDot,
+  ArrowLeft,
+  Printer,
   type LucideIcon,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
@@ -23,16 +24,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/empty-state";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const EVENT_ICONS: Record<string, LucideIcon> = {
   DIBUAT_DI_LOKET: Package,
@@ -45,19 +37,10 @@ const EVENT_ICONS: Record<string, LucideIcon> = {
   DELIVERY_ATTEMPT: Truck,
   TERKIRIM: CheckCircle2,
   RETUR_KE_GUDANG: Undo2,
+  DIANGKUT_KEMBALI_KE_AGEN: Truck,
+  DITERIMA_DI_AGEN_ASAL: Package,
   RETUR_KE_PENGIRIM: Undo2,
 };
-
-const CUSTODY_EVENT_TYPES = [
-  "MASUK_KARUNG",
-  "KELUAR_KARUNG",
-  "MASUK_GUDANG",
-  "KELUAR_GUDANG",
-  "DISERAHKAN_KE_KURIR",
-  "DIOPER_KE_KURIR_LAIN",
-  "RETUR_KE_GUDANG",
-  "RETUR_KE_PENGIRIM",
-] as const;
 
 interface ResiDetail {
   id: string;
@@ -81,6 +64,7 @@ interface CustodyHistoryItem {
   eventType: string;
   fromEntity: string | null;
   toEntity: string | null;
+  toEntityLabel: string | null;
   notes: string | null;
   timestamp: string;
 }
@@ -88,12 +72,11 @@ interface CustodyHistoryItem {
 interface CustodyHistoryResponse {
   resiId: string;
   history: CustodyHistoryItem[];
-  currentHolder: { eventType: string; toEntity: string | null } | null;
+  currentHolder: { eventType: string; toEntity: string | null; toEntityLabel: string | null } | null;
 }
 
 export default function ResiDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const queryClient = useQueryClient();
 
   const { data: resi, isLoading } = useQuery({
     queryKey: ["resi", id],
@@ -105,29 +88,33 @@ export default function ResiDetailPage({ params }: { params: Promise<{ id: strin
     queryFn: () => apiFetch<CustodyHistoryResponse>(`/api/resi/${id}/custody`),
   });
 
-  const [eventType, setEventType] = useState<(typeof CUSTODY_EVENT_TYPES)[number]>("MASUK_GUDANG");
-  const [toEntity, setToEntity] = useState("");
-  const [notes, setNotes] = useState("");
-
-  const addEvent = useMutation({
-    mutationFn: () =>
-      apiFetch(`/api/resi/${id}/custody-events`, {
-        method: "POST",
-        body: JSON.stringify({ eventType, toEntity: toEntity || undefined, notes: notes || undefined }),
-      }),
-    onSuccess: () => {
-      toast.success("Event kustodi ditambahkan");
-      setToEntity("");
-      setNotes("");
-      queryClient.invalidateQueries({ queryKey: ["resi-custody", id] });
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
   if (isLoading || !resi) return <p className="text-sm text-muted-foreground">Memuat...</p>;
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <Button
+          render={<Link href="/resi" />}
+          nativeButton={false}
+          variant="ghost"
+          size="sm"
+          className="w-fit gap-1.5 -ml-2"
+        >
+          <ArrowLeft className="size-4" />
+          Kembali ke Daftar Resi
+        </Button>
+        <Button
+          render={<Link href={`/resi/${id}/label`} target="_blank" />}
+          nativeButton={false}
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+        >
+          <Printer className="size-4" />
+          Cetak Label
+        </Button>
+      </div>
+
       <div className="flex items-center gap-3">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-terpal/10 text-terpal">
           <Package className="size-5" />
@@ -187,7 +174,7 @@ export default function ResiDetailPage({ params }: { params: Promise<{ id: strin
                 <div>
                   <Badge>{custody.currentHolder.eventType}</Badge>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Di: {custody.currentHolder.toEntity ?? "-"}
+                    Di: {custody.currentHolder.toEntityLabel ?? "-"}
                   </p>
                 </div>
               </div>
@@ -223,7 +210,8 @@ export default function ResiDetailPage({ params }: { params: Promise<{ id: strin
                     <div className="pb-1">
                       <p className="text-sm font-medium">{h.eventType}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(h.timestamp).toLocaleString("id-ID")} {h.toEntity ? `→ ${h.toEntity}` : ""}
+                        {new Date(h.timestamp).toLocaleString("id-ID")}{" "}
+                        {h.toEntityLabel ? `→ ${h.toEntityLabel}` : ""}
                       </p>
                       {h.notes && <p className="text-xs text-muted-foreground">{h.notes}</p>}
                     </div>
@@ -232,53 +220,6 @@ export default function ResiDetailPage({ params }: { params: Promise<{ id: strin
               })}
             </ol>
           )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="size-4 text-muted-foreground" />
-            Tambah Event Kustodi
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form
-            className="grid grid-cols-1 gap-4 sm:grid-cols-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              addEvent.mutate();
-            }}
-          >
-            <div className="flex flex-col gap-2">
-              <Label>Jenis Event</Label>
-              <Select value={eventType} onValueChange={(v) => setEventType(v as typeof eventType)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CUSTODY_EVENT_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label>Ke Entitas (id sack/gudang/kurir)</Label>
-              <Input value={toEntity} onChange={(e) => setToEntity(e.target.value)} />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label>Catatan</Label>
-              <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
-            </div>
-            <div className="sm:col-span-3">
-              <Button type="submit" disabled={addEvent.isPending}>
-                {addEvent.isPending ? "Menyimpan..." : "Tambah Event"}
-              </Button>
-            </div>
-          </form>
         </CardContent>
       </Card>
     </div>

@@ -32,12 +32,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const ALL_ROLES = ["OWNER", "ADMIN_PUSAT", "PETUGAS_LOKET", "KEPALA_GUDANG", "KURIR"] as const;
+const ALL_ROLES = ["OWNER", "PETUGAS_LOKET", "KEPALA_GUDANG", "KURIR"] as const;
 type RoleValue = (typeof ALL_ROLES)[number];
 
 function assignableRoles(actorRole?: string): RoleValue[] {
   if (actorRole === "OWNER") return [...ALL_ROLES];
-  if (actorRole === "ADMIN_PUSAT") return ALL_ROLES.filter((r) => r !== "OWNER" && r !== "ADMIN_PUSAT");
   if (actorRole === "KEPALA_GUDANG") return ["KURIR"];
   return [];
 }

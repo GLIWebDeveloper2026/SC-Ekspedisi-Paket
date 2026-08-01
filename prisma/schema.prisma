@@ -14,7 +14,6 @@ datasource db {
 
 enum Role {
   OWNER
-  ADMIN_PUSAT
   PETUGAS_LOKET
   KEPALA_GUDANG
   KURIR
@@ -29,6 +28,7 @@ enum ServiceType {
 enum CustodyEventType {
   DIBUAT_DI_LOKET
   MASUK_KARUNG
+  DIANGKUT_KE_GUDANG
   KELUAR_KARUNG
   MASUK_GUDANG
   KELUAR_GUDANG
@@ -37,6 +37,8 @@ enum CustodyEventType {
   DELIVERY_ATTEMPT
   TERKIRIM
   RETUR_KE_GUDANG
+  DIANGKUT_KEMBALI_KE_AGEN
+  DITERIMA_DI_AGEN_ASAL
   RETUR_KE_PENGIRIM
 }
 
@@ -72,6 +74,7 @@ model District {
   isZonaJauh     Boolean         @default(false)
   agents         Agent[]
   zoneSurcharges ZoneSurcharge[]
+  courierCoverage CourierDistrictCoverage[]
   createdAt      DateTime        @default(now())
 }
 
@@ -110,7 +113,7 @@ model User {
   // DeliveryAttempt/PackageCustodyEvent miliknya tetap utuh untuk audit.
   isActive     Boolean  @default(true)
 
-  // Nullable karena tidak semua role terikat ke satu entitas: OWNER/ADMIN_PUSAT
+  // Nullable karena tidak semua role terikat ke satu entitas: OWNER
   // biasanya di kantor pusat (agentId & warehouseId keduanya null).
   agentId     String?
   agent       Agent?     @relation(fields: [agentId], references: [id])
@@ -124,6 +127,21 @@ model User {
   // tanpa constraint tambahan, jadi wajib divalidasi di business logic).
   deliveryAttempts DeliveryAttempt[]
   codCollections   CodCollection[]
+  districtCoverage CourierDistrictCoverage[]
+}
+
+// Many-to-many: 1 kurir bisa cover beberapa kecamatan, 1 kecamatan bisa
+// dipegang beberapa kurir (buat backup). Dipakai buat filter otomatis
+// dropdown "pilih kurir" saat sortir/assign — supaya Kepala Gudang tidak
+// perlu mengingat manual siapa pegang wilayah mana (akar masalah insiden
+// Bang Jack: paket dioper ke kurir lain karena keluar wilayahnya).
+model CourierDistrictCoverage {
+  courierId  String
+  courier    User     @relation(fields: [courierId], references: [id])
+  districtId String
+  district   District @relation(fields: [districtId], references: [id])
+
+  @@id([courierId, districtId])
 }
 
 // ==========================================================
@@ -186,6 +204,9 @@ model Resi {
 
   isCod    Boolean  @default(false)
   nilaiCod Decimal? @db.Decimal(12, 2)
+
+  itemDescription String?
+  isFragile       Boolean @default(false)
 
   createdAt DateTime @default(now())
 

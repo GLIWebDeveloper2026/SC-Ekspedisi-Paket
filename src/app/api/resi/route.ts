@@ -4,8 +4,8 @@ import { Role, ServiceType, CustodyEventType } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { ApiError, requireAuth, withApiErrorHandling } from "@/lib/api-utils";
-import { hitungOngkir } from "@/lib/business/hitungOngkir";
 import { generateNoResi } from "@/lib/business/generateNoResi";
+import { resolveOngkirForResi } from "@/lib/resolve-ongkir";
 
 const createResiSchema = z.object({
   originAgentId: z.string().min(1),
@@ -21,6 +21,8 @@ const createResiSchema = z.object({
   tinggiCm: z.number().positive(),
   isCod: z.boolean().default(false),
   nilaiCod: z.number().positive().optional(),
+  itemDescription: z.string().optional(),
+  isFragile: z.boolean().default(false),
 });
 
 export const POST = withApiErrorHandling(async (req) => {
@@ -37,43 +39,17 @@ export const POST = withApiErrorHandling(async (req) => {
     throw new ApiError("VALIDATION_ERROR", "nilaiCod wajib diisi kalau isCod true", 400);
   }
 
-  const now = new Date();
-
-  const tariffRule = await prisma.tariffRule.findFirst({
-    where: {
-      serviceType: input.serviceType,
-      effectiveFrom: { lte: now },
-      OR: [{ effectiveTo: null }, { effectiveTo: { gte: now } }],
-    },
-    orderBy: { effectiveFrom: "desc" },
-  });
-
-  if (!tariffRule) {
-    throw new ApiError(
-      "VALIDATION_ERROR",
-      `Tidak ada TariffRule aktif untuk serviceType ${input.serviceType} pada tanggal ini`,
-      400,
-    );
+  // Petugas Loket cuma boleh bikin resi atas nama agennya sendiri — dipaksa
+  // dari session, bukan dipercaya dari body request.
+  if (session.user.role === Role.PETUGAS_LOKET) {
+    if (!session.user.agentId) {
+      throw new ApiError("FORBIDDEN", "Akun ini tidak terdaftar di agen mana pun", 403);
+    }
+    input.originAgentId = session.user.agentId;
   }
 
-  const zoneSurcharge = await prisma.zoneSurcharge.findUnique({
-    where: {
-      tariffRuleId_districtId: {
-        tariffRuleId: tariffRule.id,
-        districtId: input.destinationDistrictId,
-      },
-    },
-  });
-
-  const hasil = hitungOngkir({
-    beratAktualKg: input.beratAktualKg,
-    dimensi: { p: input.panjangCm, l: input.lebarCm, t: input.tinggiCm },
-    tarif: {
-      ratePerKg: Number(tariffRule.ratePerKg),
-      volumetricDivisor: Number(tariffRule.volumetricDivisor),
-      surchargeZona: zoneSurcharge ? Number(zoneSurcharge.surchargeAmount) : 0,
-    },
-  });
+  const now = new Date();
+  const { tariffRule, hasil } = await resolveOngkirForResi(input);
 
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
@@ -104,6 +80,8 @@ export const POST = withApiErrorHandling(async (req) => {
         totalOngkir: hasil.total,
         isCod: input.isCod,
         nilaiCod: input.isCod ? input.nilaiCod : null,
+        itemDescription: input.itemDescription || null,
+        isFragile: input.isFragile,
       },
     });
 
@@ -133,31 +111,70 @@ export const POST = withApiErrorHandling(async (req) => {
   );
 });
 
+/**
+ * Pagination wajib di backend (bukan ambil semua lalu potong di frontend) —
+ * begitu data ratusan/ribuan resi, ambil semua sekaligus bikin lambat & boros.
+ * Lihat docs/04-API-CONTRACT.md.
+ */
 export const GET = withApiErrorHandling(async (req) => {
-  await requireAuth();
+  const session = await requireAuth();
 
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search");
+  const serviceType = searchParams.get("serviceType");
+  const availableForSack = searchParams.get("availableForSack") === "true";
+  const availableForPayment = searchParams.get("availableForPayment") === "true";
+  const readyForSortir = searchParams.get("readyForSortir") === "true";
+  const destinationDistrictId = searchParams.get("destinationDistrictId");
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 20));
 
-  const resiList = await prisma.resi.findMany({
-    where: search
+  // Petugas Loket cuma boleh lihat resi buatan agennya sendiri — di-paksa dari
+  // session, BUKAN dari query param `agentId` (jangan biarkan dia minta lihat
+  // agen lain lewat URL).
+  const agentId =
+    session.user.role === Role.PETUGAS_LOKET ? session.user.agentId : searchParams.get("agentId");
+
+  const where = {
+    ...(search
       ? {
           OR: [
-            { noResi: { contains: search, mode: "insensitive" } },
-            { senderName: { contains: search, mode: "insensitive" } },
-            { recipientName: { contains: search, mode: "insensitive" } },
+            { noResi: { contains: search, mode: "insensitive" as const } },
+            { senderName: { contains: search, mode: "insensitive" as const } },
+            { recipientName: { contains: search, mode: "insensitive" as const } },
           ],
         }
-      : undefined,
-    include: {
-      originAgent: { select: { id: true, name: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+      : {}),
+    ...(agentId ? { originAgentId: agentId } : {}),
+    ...(serviceType ? { serviceType: serviceType as ServiceType } : {}),
+    ...(availableForSack ? { sackItems: { none: {} } } : {}),
+    ...(availableForPayment ? { isCod: false, paymentItems: { none: {} } } : {}),
+    ...(destinationDistrictId ? { destinationDistrictId } : {}),
+    ...(readyForSortir
+      ? {
+          custodyEvents: {
+            some: { eventType: CustodyEventType.MASUK_GUDANG },
+            none: {
+              eventType: { in: [CustodyEventType.KELUAR_GUDANG, CustodyEventType.DISERAHKAN_KE_KURIR] },
+            },
+          },
+        }
+      : {}),
+  };
+
+  const [resiList, totalItems] = await Promise.all([
+    prisma.resi.findMany({
+      where,
+      include: { originAgent: { select: { id: true, name: true } } },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.resi.count({ where }),
+  ]);
 
   return NextResponse.json({
-    data: resiList.map((r) => ({
+    items: resiList.map((r) => ({
       id: r.id,
       noResi: r.noResi,
       senderName: r.senderName,
@@ -165,8 +182,15 @@ export const GET = withApiErrorHandling(async (req) => {
       serviceType: r.serviceType,
       totalOngkir: Number(r.totalOngkir),
       isCod: r.isCod,
+      isFragile: r.isFragile,
+      itemDescription: r.itemDescription,
+      beratTertagihKg: Number(r.beratTertagihKg),
+      destinationDistrictId: r.destinationDistrictId,
       createdAt: r.createdAt,
       originAgent: r.originAgent,
     })),
+    page,
+    pageSize,
+    totalItems,
   });
 });

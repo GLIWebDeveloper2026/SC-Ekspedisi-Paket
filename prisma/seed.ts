@@ -73,14 +73,6 @@ async function main() {
     data: { name: "Owner Kilat", email: "owner@kilat.test", passwordHash, role: Role.OWNER },
   });
 
-  // Admin Pusat — sengaja dibuat 2 untuk membuktikan role ini bukan singleton.
-  await prisma.user.createMany({
-    data: [
-      { name: "Admin Shift Pagi", email: "admin@kilat.test", passwordHash, role: Role.ADMIN_PUSAT },
-      { name: "Admin Shift Sore", email: "admin2@kilat.test", passwordHash, role: Role.ADMIN_PUSAT },
-    ],
-  });
-
   // Petugas Loket — beberapa per agen, bukan 1 per agen.
   await prisma.user.createMany({
     data: [

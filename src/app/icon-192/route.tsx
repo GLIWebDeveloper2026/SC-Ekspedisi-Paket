@@ -12,26 +12,12 @@ export function GET() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#17191b",
+          background: "#0f172a",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "82%",
-            height: "82%",
-            borderRadius: "9999px",
-            border: "6px solid #e8a33d",
-            color: "#e8a33d",
-            fontSize: 64,
-            fontWeight: 700,
-            letterSpacing: -2,
-          }}
-        >
-          KN
-        </div>
+        <svg width="96" height="96" viewBox="0 0 24 24" fill="#ffc700">
+          <path d="M13 2 4.5 14H11l-1 8 9.5-13H13z" />
+        </svg>
       </div>
     ),
     { width: 192, height: 192 },

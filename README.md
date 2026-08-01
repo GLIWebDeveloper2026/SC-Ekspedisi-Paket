@@ -56,14 +56,14 @@ npm run db:seed
 
 Seed membuat 3 kecamatan (2 normal + 1 zona jauh) dengan agen masing-masing, 1 gudang transit, 3 versi
 tarif, dan akun untuk tiap role — semua dengan password `password123`. Kardinalitas sengaja dibuat
-realistis (bukan 1 akun per role): 2 Admin Pusat, 4 Petugas Loket tersebar di 3 agen, dan **11 Kurir**
+realistis (bukan 1 akun per role): 4 Petugas Loket tersebar di 3 agen, dan **11 Kurir**
 (kurir adalah `User` biasa ber-`role KURIR`, **bukan** tabel `Courier` terpisah — lihat
-`docs/03-SKEMA-DATABASE.md`).
+`docs/03-SKEMA-DATABASE.md`). Hanya 4 role di sistem ini (OWNER, PETUGAS_LOKET, KEPALA_GUDANG, KURIR)
+— OWNER berperan sebagai superadmin tunggal, sesuai studi kasus asli yang cuma menyebut 1 pemilik.
 
 | Email | Role |
 |---|---|
 | owner@kilat.test | OWNER |
-| admin@kilat.test, admin2@kilat.test | ADMIN_PUSAT |
 | loket@kilat.test … loket4@kilat.test | PETUGAS_LOKET |
 | gudang@kilat.test | KEPALA_GUDANG |
 | kurir@kilat.test, kurir2@kilat.test … kurir11@kilat.test | KURIR |

@@ -41,6 +41,12 @@ export const POST = withApiErrorHandling(async (req) => {
   }
   const input = parsed.data;
 
+  // Kurir cuma boleh lapor atas nama dirinya sendiri — dipaksa dari session,
+  // bukan dari body (jangan biarkan kurir lapor seolah-olah kurir lain).
+  if (session.user.role === Role.KURIR) {
+    input.courierId = session.user.id;
+  }
+
   if (input.thirdPartyFlag && (!input.thirdPartyName || (!proofPhotoFile && !input.evidenceNote))) {
     throw new ApiError(
       "VALIDATION_ERROR",

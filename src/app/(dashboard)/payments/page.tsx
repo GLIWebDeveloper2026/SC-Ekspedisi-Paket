@@ -1,21 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CreditCard, ReceiptText, History } from "lucide-react";
+import { CreditCard, ReceiptText, History, Printer } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { matchesSearch } from "@/lib/filter-utils";
 import { Money } from "@/components/money";
-import { CapStempel } from "@/components/cap-stempel";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { TableSearch } from "@/components/table-search";
+import { SearchableSelect } from "@/components/searchable-select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -40,61 +42,116 @@ interface PaymentListItem {
   paymentDate: string;
   itemCount: number;
 }
+interface AgentOption {
+  id: string;
+  name: string;
+  districtName: string;
+}
+interface ResiOption {
+  id: string;
+  noResi: string;
+  recipientName: string;
+  totalOngkir: number;
+}
+interface CreatePaymentResponse {
+  id: string;
+}
 
 const METHODS = ["CASH", "TRANSFER", "QRIS"];
 
 export default function PaymentsPage() {
+  const { data: session } = useSession();
+  const isPetugasLoket = session?.user?.role === "PETUGAS_LOKET";
   const queryClient = useQueryClient();
+
   const { data, isLoading } = useQuery({
     queryKey: ["payments"],
     queryFn: () => apiFetch<{ data: PaymentListItem[] }>("/api/payment-transactions"),
   });
+  const { data: agentData } = useQuery({
+    queryKey: ["agents"],
+    queryFn: () => apiFetch<{ data: AgentOption[] }>("/api/agents"),
+  });
 
   const [payerName, setPayerName] = useState("");
   const [method, setMethod] = useState("CASH");
-  const [itemsText, setItemsText] = useState("");
-  const [stamp, setStamp] = useState(false);
+  const [formAgentId, setFormAgentId] = useState("");
+  const [resiSearch, setResiSearch] = useState("");
+  const [selectedResiIds, setSelectedResiIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [lastReceiptId, setLastReceiptId] = useState<string | null>(null);
+
+  const effectiveAgentId = isPetugasLoket ? (session?.user?.agentId ?? "") : formAgentId;
+  const agentOptions = (agentData?.data ?? []).map((a) => ({
+    id: a.id,
+    label: `${a.name} (${a.districtName})`,
+  }));
 
   const filtered = useMemo(
     () => (data?.data ?? []).filter((p) => matchesSearch(search, p.payerName, p.method)),
     [data, search],
   );
 
+  const { data: availableResi, isFetching: availableResiLoading } = useQuery({
+    queryKey: ["resi-available-for-payment", effectiveAgentId, resiSearch],
+    queryFn: () => {
+      const params = new URLSearchParams({ availableForPayment: "true", pageSize: "100" });
+      if (effectiveAgentId) params.set("agentId", effectiveAgentId);
+      if (resiSearch) params.set("search", resiSearch);
+      return apiFetch<{ items: ResiOption[] }>(`/api/resi?${params.toString()}`);
+    },
+    enabled: !!effectiveAgentId,
+  });
+
+  const selectedTotal = (availableResi?.items ?? [])
+    .filter((r) => selectedResiIds.has(r.id))
+    .reduce((sum, r) => sum + r.totalOngkir, 0);
+
   const mutation = useMutation({
     mutationFn: () => {
-      const items = itemsText
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((line) => {
-          const [resiId, amount] = line.split(",").map((s) => s.trim());
-          return { resiId, amountAllocated: Number(amount) };
-        });
-
-      return apiFetch("/api/payment-transactions", {
+      const items = (availableResi?.items ?? [])
+        .filter((r) => selectedResiIds.has(r.id))
+        .map((r) => ({ resiId: r.id, amountAllocated: r.totalOngkir }));
+      return apiFetch<CreatePaymentResponse>("/api/payment-transactions", {
         method: "POST",
         body: JSON.stringify({ payerName, method, items }),
       });
     },
-    onSuccess: () => {
-      setStamp(true);
+    onSuccess: (res) => {
       toast.success("Transaksi pembayaran berhasil dibuat");
+      setLastReceiptId(res.id);
       setPayerName("");
-      setItemsText("");
+      setSelectedResiIds(new Set());
       queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["resi-available-for-payment"] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
   return (
     <div className="flex flex-col gap-6">
-      <CapStempel show={stamp} label="Lunas" onDone={() => setStamp(false)} />
       <PageHeader
         icon={CreditCard}
         title="Pembayaran Batch"
         description="Satu transaksi bisa mencakup banyak resi (1:N) — tiap resi bisa punya nasib berbeda tanpa mengubah transaksi aslinya."
       />
+
+      {lastReceiptId && (
+        <Card className="border-lampu-natrium/40 bg-lampu-natrium/5">
+          <CardContent className="flex items-center justify-between gap-3 py-4">
+            <p className="text-sm">Transaksi berhasil dibuat.</p>
+            <Button
+              render={<Link href={`/payments/${lastReceiptId}/receipt`} target="_blank" />}
+              nativeButton={false}
+              size="sm"
+              className="gap-1.5"
+            >
+              <Printer className="size-3.5" />
+              Cetak Bukti Transaksi
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -105,45 +162,136 @@ export default function PaymentsPage() {
         </CardHeader>
         <CardContent>
           <form
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+            className="flex flex-col gap-4"
             onSubmit={(e) => {
               e.preventDefault();
               mutation.mutate();
             }}
           >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="flex flex-col gap-2">
+                <Label>Nama Pembayar</Label>
+                <Input required value={payerName} onChange={(e) => setPayerName(e.target.value)} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Metode</Label>
+                <Select value={method} onValueChange={(v) => setMethod(v ?? "CASH")}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {METHODS.map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {m}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Agen</Label>
+                <SearchableSelect
+                  placeholder="Pilih agen"
+                  value={effectiveAgentId}
+                  onValueChange={(v) => {
+                    setFormAgentId(v);
+                    setSelectedResiIds(new Set());
+                  }}
+                  options={agentOptions}
+                  disabled={isPetugasLoket}
+                />
+              </div>
+            </div>
+
             <div className="flex flex-col gap-2">
-              <Label>Nama Pembayar</Label>
-              <Input required value={payerName} onChange={(e) => setPayerName(e.target.value)} />
+              <Label>Pilih Resi (non-COD, belum dibayar)</Label>
+              {!effectiveAgentId ? (
+                <p className="text-sm text-muted-foreground">Pilih agen dulu untuk melihat resi yang tersedia.</p>
+              ) : (
+                <div className="rounded-lg border">
+                  <div className="border-b p-2">
+                    <TableSearch
+                      value={resiSearch}
+                      onChange={setResiSearch}
+                      placeholder="Cari no resi atau penerima..."
+                      className="relative"
+                    />
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {availableResiLoading && (
+                      <p className="p-3 text-sm text-muted-foreground">Memuat resi...</p>
+                    )}
+                    {availableResi && availableResi.items.length === 0 && (
+                      <p className="p-3 text-sm text-muted-foreground">
+                        Tidak ada resi non-COD yang belum dibayar untuk agen ini.
+                      </p>
+                    )}
+                    {availableResi?.items.map((r) => {
+                      const checked = selectedResiIds.has(r.id);
+                      return (
+                        <label
+                          key={r.id}
+                          className="flex cursor-pointer items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-muted/40"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(v) =>
+                              setSelectedResiIds((prev) => {
+                                const next = new Set(prev);
+                                if (v) next.add(r.id);
+                                else next.delete(r.id);
+                                return next;
+                              })
+                            }
+                          />
+                          <span className="font-mono">{r.noResi}</span>
+                          <span className="text-muted-foreground">{r.recipientName}</span>
+                          <span className="ml-auto">
+                            <Money amount={r.totalOngkir} />
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {availableResi && availableResi.items.length > 0 && (
+                    <div className="flex items-center justify-between border-t px-3 py-2 text-xs">
+                      <span className="text-muted-foreground">
+                        {selectedResiIds.size} resi dipilih — total <Money amount={selectedTotal} />
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          className="text-primary hover:underline"
+                          onClick={() =>
+                            setSelectedResiIds(new Set(availableResi.items.map((r) => r.id)))
+                          }
+                        >
+                          Pilih semua
+                        </button>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:underline"
+                          onClick={() => setSelectedResiIds(new Set())}
+                        >
+                          Kosongkan
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            <div className="flex flex-col gap-2">
-              <Label>Metode</Label>
-              <Select value={method} onValueChange={(v) => setMethod(v ?? "CASH")}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {METHODS.map((m) => (
-                    <SelectItem key={m} value={m}>
-                      {m}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <Label>Item (format: resiId,jumlah — satu baris per resi)</Label>
-              <Textarea
-                required
-                rows={4}
-                value={itemsText}
-                onChange={(e) => setItemsText(e.target.value)}
-                placeholder={"resi_010,20000\nresi_011,25000"}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <Button type="submit" disabled={mutation.isPending} className="gap-1.5">
+
+            <div>
+              <Button
+                type="submit"
+                disabled={mutation.isPending || selectedResiIds.size === 0}
+                className="gap-1.5"
+              >
                 <ReceiptText className="size-4" />
-                {mutation.isPending ? "Menyimpan..." : "Buat Transaksi"}
+                {mutation.isPending
+                  ? "Menyimpan..."
+                  : `Buat Transaksi (${selectedResiIds.size} resi)`}
               </Button>
             </div>
           </form>
@@ -183,6 +331,7 @@ export default function PaymentsPage() {
                       <TableHead>Jumlah Resi</TableHead>
                       <TableHead>Total</TableHead>
                       <TableHead>Tanggal</TableHead>
+                      <TableHead>Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -195,6 +344,18 @@ export default function PaymentsPage() {
                           <Money amount={p.totalAmount} />
                         </TableCell>
                         <TableCell>{new Date(p.paymentDate).toLocaleString("id-ID")}</TableCell>
+                        <TableCell>
+                          <Button
+                            render={<Link href={`/payments/${p.id}/receipt`} target="_blank" />}
+                            nativeButton={false}
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1.5"
+                          >
+                            <Printer className="size-3.5" />
+                            Cetak
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

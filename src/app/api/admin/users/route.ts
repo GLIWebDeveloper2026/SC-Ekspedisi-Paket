@@ -7,7 +7,7 @@ import { ApiError, requireAuth, withApiErrorHandling } from "@/lib/api-utils";
 import { canCreateRole } from "@/lib/business/canCreateRole";
 import { hashPassword } from "@/lib/business/hashPassword";
 
-const MANAGE_ACCOUNTS_ROLES = [Role.OWNER, Role.ADMIN_PUSAT, Role.KEPALA_GUDANG];
+const MANAGE_ACCOUNTS_ROLES = [Role.OWNER, Role.KEPALA_GUDANG];
 
 const createUserSchema = z.object({
   name: z.string().min(1),

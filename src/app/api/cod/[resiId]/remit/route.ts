@@ -11,7 +11,7 @@ const remitSchema = z.object({
 });
 
 export const POST = withApiErrorHandling(async (req, ctx) => {
-  await requireAuth([Role.KURIR, Role.ADMIN_PUSAT, Role.OWNER]);
+  await requireAuth([Role.KURIR, Role.OWNER]);
   const { resiId } = await (ctx as { params: Promise<{ resiId: string }> }).params;
 
   const body = await req.json();

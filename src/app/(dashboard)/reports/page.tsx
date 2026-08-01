@@ -26,7 +26,12 @@ interface SackDiscrepancy {
   destinationInfo: string;
   expectedCount: number;
   arrivedCount: number;
-  missingResi: { resiId: string; noResi: string }[];
+  missingResi: {
+    resiId: string;
+    noResi: string;
+    pemegangTerakhir: string;
+    waktuTerakhirTercatat: string | null;
+  }[];
 }
 interface CodDiscrepancy {
   resiId: string;
@@ -114,6 +119,7 @@ export default function ReportsPage() {
                       <TableHead>Diharapkan</TableHead>
                       <TableHead>Sudah Masuk Gudang</TableHead>
                       <TableHead>Resi Hilang</TableHead>
+                      <TableHead>Pemegang Terakhir</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -124,6 +130,9 @@ export default function ReportsPage() {
                         <TableCell className="font-mono tabular-nums">{s.expectedCount}</TableCell>
                         <TableCell className="font-mono tabular-nums">{s.arrivedCount}</TableCell>
                         <TableCell>{s.missingResi.map((r) => r.noResi).join(", ")}</TableCell>
+                        <TableCell className="text-stempel">
+                          {s.missingResi.map((r) => r.pemegangTerakhir).join(", ")}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

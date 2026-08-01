@@ -21,6 +21,7 @@ import { isEligibleForReturn } from "@/lib/business/checkRetur";
 const STATUS_LABELS: Record<CustodyEventType, string> = {
   DIBUAT_DI_LOKET: "Di Loket",
   MASUK_KARUNG: "Di Karung",
+  DIANGKUT_KE_GUDANG: "Menuju Gudang",
   KELUAR_KARUNG: "Keluar Karung",
   MASUK_GUDANG: "Di Gudang",
   KELUAR_GUDANG: "Keluar Gudang",
@@ -29,6 +30,8 @@ const STATUS_LABELS: Record<CustodyEventType, string> = {
   DELIVERY_ATTEMPT: "Percobaan Antar",
   TERKIRIM: "Terkirim",
   RETUR_KE_GUDANG: "Retur ke Gudang",
+  DIANGKUT_KEMBALI_KE_AGEN: "Menuju Agen Asal",
+  DITERIMA_DI_AGEN_ASAL: "Sampai di Agen Asal",
   RETUR_KE_PENGIRIM: "Retur ke Pengirim",
 };
 

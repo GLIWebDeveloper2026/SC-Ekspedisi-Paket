@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import type { Role } from "@prisma/client";
@@ -17,7 +18,9 @@ import {
   Users,
   KeyRound,
   LogOut,
-  Package,
+  Building2,
+  Route,
+  SearchCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -33,23 +36,35 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/resi", label: "Resi", icon: PackageSearch },
   { href: "/sacks", label: "Karung / Sack", icon: Boxes },
-  { href: "/delivery", label: "Delivery Attempt", icon: Truck },
-  { href: "/cod", label: "COD", icon: Wallet },
+  {
+    href: "/sortir",
+    label: "Sortir & Assign Kurir",
+    icon: Route,
+    roles: ["OWNER", "KEPALA_GUDANG"] as Role[],
+  },
+  { href: "/delivery", label: "Delivery Attempt", icon: Truck, roles: ["OWNER"] as Role[] },
+  { href: "/cod", label: "COD", icon: Wallet, roles: ["OWNER", "KEPALA_GUDANG"] as Role[] },
   { href: "/payments", label: "Pembayaran", icon: CreditCard },
   { href: "/returns", label: "Retur", icon: Undo2 },
   { href: "/tariffs", label: "Tarif", icon: Percent, roles: ["OWNER"] as Role[] },
+  { href: "/master-data", label: "Master Data", icon: Building2, roles: ["OWNER"] as Role[] },
   { href: "/reports", label: "Laporan", icon: BarChart3 },
+  {
+    href: "/investigasi-selisih",
+    label: "Investigasi Selisih",
+    icon: SearchCheck,
+    roles: ["OWNER", "KEPALA_GUDANG"] as Role[],
+  },
   {
     href: "/akun",
     label: "Kelola Akun",
     icon: Users,
-    roles: ["OWNER", "ADMIN_PUSAT", "KEPALA_GUDANG"] as Role[],
+    roles: ["OWNER", "KEPALA_GUDANG"] as Role[],
   },
 ];
 
 const ROLE_LABELS: Record<Role, string> = {
   OWNER: "Owner",
-  ADMIN_PUSAT: "Admin Pusat",
   PETUGAS_LOKET: "Petugas Loket",
   KEPALA_GUDANG: "Kepala Gudang",
   KURIR: "Kurir",
@@ -66,10 +81,10 @@ export function SidebarNav({
   const initial = userName.trim().charAt(0).toUpperCase() || "?";
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
+    <aside className="flex h-dvh w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
       <div className="flex items-center gap-2 border-b px-4 py-4">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-terpal text-white">
-          <Package className="size-5" />
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-lampu-natrium/15">
+          <Image src="/logo-bolt.png" alt="" width={22} height={22} />
         </div>
         <div className="min-w-0">
           <p className="font-heading truncate font-bold leading-tight">Kilat Nusantara</p>
@@ -87,10 +102,10 @@ export function SidebarNav({
               href={item.href}
               className={cn(
                 "flex items-center gap-2.5 rounded-md border-l-2 border-transparent px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                active && "border-terpal bg-sidebar-accent font-medium text-sidebar-foreground",
+                active && "border-lampu-natrium bg-sidebar-accent font-medium text-sidebar-foreground",
               )}
             >
-              <Icon className={cn("size-4 shrink-0", active ? "text-terpal" : "text-sidebar-foreground/50")} />
+              <Icon className={cn("size-4 shrink-0", active ? "text-lampu-natrium" : "text-sidebar-foreground/50")} />
               <span className="truncate">{item.label}</span>
             </Link>
           );
