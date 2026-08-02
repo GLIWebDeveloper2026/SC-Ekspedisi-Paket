@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "tsx prisma/seed.ts && tsx prisma/seed-kejadian.ts",
+    "db:seed-kejadian": "tsx prisma/seed-kejadian.ts",
     "db:generate": "prisma generate"
   },
   "dependencies": {
@@ -58,6 +59,6 @@
     "@rolldown/binding-win32-x64-msvc": "^1.2.1"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts && tsx prisma/seed-kejadian.ts"
   }
 }
