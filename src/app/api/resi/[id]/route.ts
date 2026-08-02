@@ -22,6 +22,8 @@ export const GET = withApiErrorHandling(async (_req, ctx) => {
     throw new ApiError("NOT_FOUND", "Resi tidak ditemukan", 404);
   }
 
+  const adjustmentTotal = resi.adjustments.reduce((sum, a) => sum + Number(a.amount), 0);
+
   return NextResponse.json({
     ...resi,
     beratAktualKg: Number(resi.beratAktualKg),
@@ -32,6 +34,8 @@ export const GET = withApiErrorHandling(async (_req, ctx) => {
     biayaDasar: Number(resi.biayaDasar),
     biayaZona: Number(resi.biayaZona),
     totalOngkir: Number(resi.totalOngkir),
+    totalTagihan: Number(resi.totalOngkir) + adjustmentTotal,
+    adjustments: resi.adjustments.map((a) => ({ ...a, amount: Number(a.amount) })),
     nilaiCod: resi.nilaiCod ? Number(resi.nilaiCod) : null,
   });
 });

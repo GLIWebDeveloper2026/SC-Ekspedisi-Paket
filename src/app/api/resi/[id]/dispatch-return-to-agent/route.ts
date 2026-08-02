@@ -5,6 +5,7 @@ import { CustodyEventType, Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { ApiError, requireAuth, withApiErrorHandling } from "@/lib/api-utils";
 import { resolveLastCustody } from "@/lib/business/resolveLastCustody";
+import { getLoketStaffIdsForAgent, notifyUsers } from "@/lib/notify";
 
 const schema = z.object({ transportedByUserId: z.string().min(1) });
 
@@ -43,6 +44,20 @@ export const POST = withApiErrorHandling(async (req, ctx) => {
       actorUserId: parsed.data.transportedByUserId,
     },
   });
+
+  const loketStaffIds = await getLoketStaffIdsForAgent(resi.originAgentId);
+  await Promise.all([
+    notifyUsers([kurir.id], {
+      title: "Tugas bawa retur ke agen",
+      body: `Bawa retur resi ${resi.noResi} kembali ke agen asal`,
+      link: "/kurir",
+    }),
+    notifyUsers(loketStaffIds, {
+      title: "Retur menuju agen",
+      body: `Retur resi ${resi.noResi} sedang dalam perjalanan kembali, dibawa ${kurir.name}`,
+      link: "/returns",
+    }),
+  ]);
 
   return NextResponse.json({ resiId: id, status: "DIANGKUT_KEMBALI_KE_AGEN" });
 });

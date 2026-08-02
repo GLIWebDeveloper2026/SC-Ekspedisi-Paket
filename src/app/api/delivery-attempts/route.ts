@@ -8,6 +8,7 @@ import { shouldTriggerAutoReturn } from "@/lib/business/checkRetur";
 import { hitungSetoranCod } from "@/lib/business/hitungSetoranCod";
 import { uploadProofPhoto } from "@/lib/supabase";
 import { KOMISI_DEFAULT_PERCENT } from "@/lib/business/config";
+import { getGudangStaffIds, notifyUsers } from "@/lib/notify";
 
 const baseSchema = z.object({
   resiId: z.string().min(1),
@@ -151,6 +152,15 @@ export const POST = withApiErrorHandling(async (req) => {
 
     return { attempt, codCollection };
   });
+
+  if (willTriggerReturn) {
+    const gudangStaffIds = await getGudangStaffIds();
+    await notifyUsers(gudangStaffIds, {
+      title: "Resi gagal antar 3x",
+      body: `Resi ${resi.noResi} gagal diantar 3x berturut-turut, otomatis masuk retur`,
+      link: "/returns",
+    });
+  }
 
   return NextResponse.json(
     {

@@ -4,6 +4,7 @@ import { Package } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { BottomTabBar } from "@/components/kurir/bottom-tab-bar";
 import { SyncBadge } from "@/components/kurir/sync-badge";
+import { NotificationBell } from "@/components/notification-bell";
 
 export default async function KurirLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -22,7 +23,10 @@ export default async function KurirLayout({ children }: { children: React.ReactN
           </div>
           <span className="font-heading font-bold">Kilat Nusantara</span>
         </div>
-        <span className="text-xs text-muted-foreground">{session.user.name}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">{session.user.name}</span>
+          <NotificationBell dark />
+        </div>
       </header>
       <main className="px-4 py-4 pb-20">{children}</main>
       <BottomTabBar />

@@ -13,28 +13,30 @@ const FINAL_DELIVERY_STATUSES = new Set<string>([
 /**
  * Daftar tugas hari ini untuk kurir yang login, di-scope ke session sendiri
  * (kurir tidak bisa lihat/akses tugas kurir lain sama sekali). Ada 3 jenis
- * tugas, karena ada 3 titik assignment berbeda di alur gudang/retur yang
- * semuanya menaruh kurir yang ditugaskan di kolom berbeda:
- * - deliveries: DISERAHKAN_KE_KURIR dengan toEntity = aku, belum final.
- * - sackPickups: aku ditugaskan bawa karung dari agen ke gudang
- *   (DIANGKUT_KE_GUDANG dengan actorUserId = aku), grup per karung, masih
- *   aktif selama event itu masih jadi status terakhir resi (belum MASUK_GUDANG).
+ * tugas, karena ada 3 titik assignment berbeda di alur gudang/retur:
+ * - sackPickups: karung yang DITUNJUK ke aku lewat /api/sacks/:id/assign-pickup
+ *   tapi belum aku konfirmasi ambil (belum ada event DIANGKUT_KE_GUDANG sama
+ *   sekali untuk resi di dalamnya) — ini yang butuh AKSI dariku.
+ * - deliveries: DISERAHKAN_KE_KURIR dengan toEntity = aku, belum final —
+ *   butuh AKSI lapor hasil antar.
  * - returnPickups: aku ditugaskan bawa retur balik ke agen asal
- *   (DIANGKUT_KEMBALI_KE_AGEN dengan actorUserId = aku), masih aktif selama
- *   belum DITERIMA_DI_AGEN_ASAL.
+ *   (DIANGKUT_KEMBALI_KE_AGEN dengan actorUserId = aku), sudah tercatat
+ *   otomatis saat Kepala Gudang menugaskan (serah terima terjadi di tempat
+ *   yang sama, di gudang) — jadi ini cuma informasi, tidak butuh aksi lagi.
  */
 export const GET = withApiErrorHandling(async () => {
   const session = await requireAuth();
   const myId = session.user.id;
 
-  const [assignedDeliveryEvents, sackPickupEvents, returnPickupEvents] = await Promise.all([
-    prisma.packageCustodyEvent.findMany({
-      where: { eventType: CustodyEventType.DISERAHKAN_KE_KURIR, toEntity: myId },
-      select: { resiId: true },
-      distinct: ["resiId"],
+  const [assignedSacks, assignedDeliveryEvents, returnPickupEvents] = await Promise.all([
+    prisma.sack.findMany({
+      where: { assignedPickupCourierId: myId },
+      include: {
+        items: { include: { resi: { select: { recipientName: true, recipientAddress: true } } } },
+      },
     }),
     prisma.packageCustodyEvent.findMany({
-      where: { eventType: CustodyEventType.DIANGKUT_KE_GUDANG, actorUserId: myId },
+      where: { eventType: CustodyEventType.DISERAHKAN_KE_KURIR, toEntity: myId },
       select: { resiId: true },
       distinct: ["resiId"],
     }),
@@ -46,19 +48,43 @@ export const GET = withApiErrorHandling(async () => {
   ]);
 
   const deliveryResiIds = assignedDeliveryEvents.map((e) => e.resiId);
-  const sackPickupResiIds = sackPickupEvents.map((e) => e.resiId);
   const returnPickupResiIds = returnPickupEvents.map((e) => e.resiId);
+  const allResiIds = [...new Set([...deliveryResiIds, ...returnPickupResiIds])];
 
-  const allResiIds = [...new Set([...deliveryResiIds, ...sackPickupResiIds, ...returnPickupResiIds])];
-  if (allResiIds.length === 0) {
-    return NextResponse.json({ data: { deliveries: [], sackPickups: [], returnPickups: [] } });
-  }
-
-  const resiList = await prisma.resi.findMany({
-    where: { id: { in: allResiIds } },
-    include: { custodyEvents: true, sackItems: { include: { sack: true } } },
-  });
+  const resiList = allResiIds.length
+    ? await prisma.resi.findMany({
+        where: { id: { in: allResiIds } },
+        include: { custodyEvents: true },
+      })
+    : [];
   const resiById = new Map(resiList.map((r) => [r.id, r]));
+
+  // Karung yang ditunjuk ke aku tapi belum satupun resinya diangkut —
+  // masih pending konfirmasi ambil.
+  const allSackResiIds = assignedSacks.flatMap((s) => s.items.map((i) => i.resiId));
+  const alreadyDispatchedIds = allSackResiIds.length
+    ? new Set(
+        (
+          await prisma.packageCustodyEvent.findMany({
+            where: { resiId: { in: allSackResiIds }, eventType: CustodyEventType.DIANGKUT_KE_GUDANG },
+            select: { resiId: true },
+          })
+        ).map((e) => e.resiId),
+      )
+    : new Set<string>();
+
+  const sackPickups = assignedSacks
+    .filter((s) => s.items.every((i) => !alreadyDispatchedIds.has(i.resiId)))
+    .map((s) => ({
+      sackId: s.id,
+      originInfo: s.originInfo,
+      destinationInfo: s.destinationInfo,
+      items: s.items.map((i) => ({
+        resiId: i.resiId,
+        recipientName: i.resi.recipientName,
+        recipientAddress: i.resi.recipientAddress,
+      })),
+    }));
 
   const deliveries = deliveryResiIds
     .map((id) => resiById.get(id))
@@ -76,33 +102,6 @@ export const GET = withApiErrorHandling(async () => {
       isCod: r.isCod,
     }));
 
-  const activeSackPickupResi = sackPickupResiIds
-    .map((id) => resiById.get(id))
-    .filter((r): r is NonNullable<typeof r> => {
-      if (!r) return false;
-      const last = resolveLastCustody(r.custodyEvents);
-      return last?.eventType === CustodyEventType.DIANGKUT_KE_GUDANG;
-    });
-  const sackPickupsBySackId = new Map<
-    string,
-    { sackId: string; originInfo: string; destinationInfo: string; resiCount: number }
-  >();
-  for (const r of activeSackPickupResi) {
-    const sack = r.sackItems[0]?.sack;
-    if (!sack) continue;
-    const existing = sackPickupsBySackId.get(sack.id);
-    if (existing) {
-      existing.resiCount += 1;
-    } else {
-      sackPickupsBySackId.set(sack.id, {
-        sackId: sack.id,
-        originInfo: sack.originInfo,
-        destinationInfo: sack.destinationInfo,
-        resiCount: 1,
-      });
-    }
-  }
-
   const returnPickups = returnPickupResiIds
     .map((id) => resiById.get(id))
     .filter((r): r is NonNullable<typeof r> => {
@@ -114,13 +113,8 @@ export const GET = withApiErrorHandling(async () => {
       id: r.id,
       noResi: r.noResi,
       recipientName: r.recipientName,
+      recipientAddress: r.recipientAddress,
     }));
 
-  return NextResponse.json({
-    data: {
-      deliveries,
-      sackPickups: [...sackPickupsBySackId.values()],
-      returnPickups,
-    },
-  });
+  return NextResponse.json({ data: { sackPickups, deliveries, returnPickups } });
 });

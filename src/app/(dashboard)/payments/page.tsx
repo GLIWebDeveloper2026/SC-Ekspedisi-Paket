@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -52,6 +53,7 @@ interface ResiOption {
   noResi: string;
   recipientName: string;
   totalOngkir: number;
+  totalTagihan: number;
 }
 interface CreatePaymentResponse {
   id: string;
@@ -105,13 +107,13 @@ export default function PaymentsPage() {
 
   const selectedTotal = (availableResi?.items ?? [])
     .filter((r) => selectedResiIds.has(r.id))
-    .reduce((sum, r) => sum + r.totalOngkir, 0);
+    .reduce((sum, r) => sum + r.totalTagihan, 0);
 
   const mutation = useMutation({
     mutationFn: () => {
       const items = (availableResi?.items ?? [])
         .filter((r) => selectedResiIds.has(r.id))
-        .map((r) => ({ resiId: r.id, amountAllocated: r.totalOngkir }));
+        .map((r) => ({ resiId: r.id, amountAllocated: r.totalTagihan }));
       return apiFetch<CreatePaymentResponse>("/api/payment-transactions", {
         method: "POST",
         body: JSON.stringify({ payerName, method, items }),
@@ -246,8 +248,13 @@ export default function PaymentsPage() {
                           />
                           <span className="font-mono">{r.noResi}</span>
                           <span className="text-muted-foreground">{r.recipientName}</span>
-                          <span className="ml-auto">
-                            <Money amount={r.totalOngkir} />
+                          <span className="ml-auto flex items-center gap-1.5">
+                            {r.totalTagihan !== r.totalOngkir && (
+                              <Badge variant="outline" className="text-[10px]">
+                                disesuaikan
+                              </Badge>
+                            )}
+                            <Money amount={r.totalTagihan} />
                           </span>
                         </label>
                       );

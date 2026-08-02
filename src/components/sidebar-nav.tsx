@@ -23,6 +23,7 @@ import {
   SearchCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/notification-bell";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -86,10 +87,11 @@ export function SidebarNav({
         <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-lampu-natrium/15">
           <Image src="/logo-bolt.png" alt="" width={22} height={22} />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-heading truncate font-bold leading-tight">Kilat Nusantara</p>
           <p className="text-[11px] text-muted-foreground">Ekspedisi & Penagihan</p>
         </div>
+        <NotificationBell dark />
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">

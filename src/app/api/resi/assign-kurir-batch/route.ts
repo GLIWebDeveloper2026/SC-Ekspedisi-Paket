@@ -4,6 +4,7 @@ import { CustodyEventType, Role } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { ApiError, requireAuth, withApiErrorHandling } from "@/lib/api-utils";
+import { notifyUsers } from "@/lib/notify";
 
 const assignBatchSchema = z.object({
   resiIds: z.array(z.string().min(1)).min(1, "Pilih minimal 1 resi"),
@@ -74,6 +75,12 @@ export const POST = withApiErrorHandling(async (req) => {
       })),
     }),
   ]);
+
+  await notifyUsers([assignedKurirId], {
+    title: "Tugas antar baru",
+    body: `Kamu ditugaskan mengantar ${resiIds.length} resi`,
+    link: "/kurir",
+  });
 
   return NextResponse.json({ assignedKurirId, resiCount: resiIds.length });
 });

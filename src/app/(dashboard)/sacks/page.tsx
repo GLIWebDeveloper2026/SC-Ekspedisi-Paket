@@ -23,6 +23,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { SearchableSelect } from "@/components/searchable-select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -41,6 +42,9 @@ interface SackListItem {
   destinationInfo: string;
   itemCount: number;
   createdAt: string;
+  isDispatched: boolean;
+  assignedPickupCourierId: string | null;
+  assignedPickupCourierName: string | null;
 }
 
 interface CourierOption {
@@ -85,7 +89,7 @@ interface SackDetail {
   originInfo: string;
   destinationInfo: string;
   isDispatched: boolean;
-  items: { resiId: string; noResi: string; arrived: boolean }[];
+  items: { resiId: string; noResi: string; beratTertagihKg: number; arrived: boolean }[];
 }
 
 export default function SacksPage() {
@@ -120,6 +124,7 @@ export default function SacksPage() {
   const [discrepancyResult, setDiscrepancyResult] = useState<DiscrepancyResult | null>(null);
   const [arrivalPanelSackId, setArrivalPanelSackId] = useState<string | null>(null);
   const [checkedResiIds, setCheckedResiIds] = useState<Set<string>>(new Set());
+  const [reweighKg, setReweighKg] = useState<Record<string, string>>({});
 
   // Form "Buat Karung Baru"
   const [formAgentId, setFormAgentId] = useState("");
@@ -177,14 +182,14 @@ export default function SacksPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const dispatchMutation = useMutation({
+  const assignPickupMutation = useMutation({
     mutationFn: (sackId: string) =>
-      apiFetch(`/api/sacks/${sackId}/dispatch`, {
+      apiFetch(`/api/sacks/${sackId}/assign-pickup`, {
         method: "POST",
-        body: JSON.stringify({ transportedByUserId: selectedCourierId }),
+        body: JSON.stringify({ courierId: selectedCourierId }),
       }),
     onSuccess: () => {
-      toast.success("Karung ditandai diangkut ke gudang");
+      toast.success("Kurir penjemput ditugaskan — menunggu dia konfirmasi ambil");
       setDispatchSackId(null);
       setSelectedCourierId("");
       queryClient.invalidateQueries({ queryKey: ["sacks"] });
@@ -208,15 +213,26 @@ export default function SacksPage() {
   });
 
   const confirmArrivalMutation = useMutation({
-    mutationFn: (sackId: string) =>
-      apiFetch(`/api/sacks/${sackId}/confirm-arrival`, {
+    mutationFn: (sackId: string) => {
+      const weights = Object.fromEntries(
+        [...checkedResiIds]
+          .filter((resiId) => reweighKg[resiId] && Number(reweighKg[resiId]) > 0)
+          .map((resiId) => [resiId, Number(reweighKg[resiId])]),
+      );
+      return apiFetch<{ adjustmentCount: number }>(`/api/sacks/${sackId}/confirm-arrival`, {
         method: "POST",
-        body: JSON.stringify({ resiIds: [...checkedResiIds] }),
-      }),
-    onSuccess: () => {
-      toast.success("Kedatangan dikonfirmasi");
+        body: JSON.stringify({ resiIds: [...checkedResiIds], weights }),
+      });
+    },
+    onSuccess: (result) => {
+      toast.success(
+        result.adjustmentCount > 0
+          ? `Kedatangan dikonfirmasi — ${result.adjustmentCount} resi dapat penyesuaian tarif dari timbang ulang`
+          : "Kedatangan dikonfirmasi",
+      );
       setArrivalPanelSackId(null);
       setCheckedResiIds(new Set());
+      setReweighKg({});
       queryClient.invalidateQueries({ queryKey: ["report-discrepancies"] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -414,7 +430,18 @@ export default function SacksPage() {
                         <TableCell>{new Date(s.createdAt).toLocaleString("id-ID")}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap items-center gap-2">
-                            {canDispatch &&
+                            {s.isDispatched ? (
+                              <Badge variant="outline" className="gap-1.5">
+                                <Truck className="size-3 text-lampu-natrium" />
+                                Sudah diangkut ke gudang
+                              </Badge>
+                            ) : s.assignedPickupCourierId ? (
+                              <Badge variant="outline" className="gap-1.5">
+                                <Truck className="size-3" />
+                                Menunggu {s.assignedPickupCourierName ?? "kurir"} mengambil
+                              </Badge>
+                            ) : (
+                              canDispatch &&
                               (dispatchSackId === s.id ? (
                                 <div className="flex items-center gap-2">
                                   <SearchableSelect
@@ -426,10 +453,10 @@ export default function SacksPage() {
                                   />
                                   <Button
                                     size="sm"
-                                    disabled={!selectedCourierId || dispatchMutation.isPending}
-                                    onClick={() => dispatchMutation.mutate(s.id)}
+                                    disabled={!selectedCourierId || assignPickupMutation.isPending}
+                                    onClick={() => assignPickupMutation.mutate(s.id)}
                                   >
-                                    {dispatchMutation.isPending ? "Mengirim..." : "Konfirmasi"}
+                                    {assignPickupMutation.isPending ? "Menugaskan..." : "Tugaskan"}
                                   </Button>
                                   <Button
                                     size="sm"
@@ -450,9 +477,10 @@ export default function SacksPage() {
                                   onClick={() => setDispatchSackId(s.id)}
                                 >
                                   <Truck className="size-3.5" />
-                                  Kirim ke Gudang
+                                  Tugaskan Kurir Penjemput
                                 </Button>
-                              ))}
+                              ))
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
@@ -490,7 +518,8 @@ export default function SacksPage() {
                               {arrivalSack && arrivalSack.isDispatched && (
                                 <div className="flex flex-col gap-2">
                                   <p className="text-muted-foreground">
-                                    Centang resi yang benar-benar ada secara fisik di karung ini:
+                                    Centang resi yang benar-benar ada secara fisik di karung ini, timbang ulang
+                                    kalau perlu (kosongkan kalau beratnya sama):
                                   </p>
                                   <ul className="flex flex-col gap-1.5">
                                     {arrivalSack.items.map((item) => (
@@ -508,8 +537,25 @@ export default function SacksPage() {
                                           }
                                         />
                                         <span className="font-mono">{item.noResi}</span>
-                                        {item.arrived && (
+                                        <span className="text-muted-foreground">
+                                          (tertagih {item.beratTertagihKg}kg)
+                                        </span>
+                                        {item.arrived ? (
                                           <span className="text-muted-foreground">(sudah dikonfirmasi)</span>
+                                        ) : (
+                                          checkedResiIds.has(item.resiId) && (
+                                            <Input
+                                              type="number"
+                                              step="0.1"
+                                              min="0"
+                                              placeholder="Timbang ulang (kg)"
+                                              value={reweighKg[item.resiId] ?? ""}
+                                              onChange={(e) =>
+                                                setReweighKg((prev) => ({ ...prev, [item.resiId]: e.target.value }))
+                                              }
+                                              className="h-7 w-32 text-xs"
+                                            />
+                                          )
                                         )}
                                       </li>
                                     ))}

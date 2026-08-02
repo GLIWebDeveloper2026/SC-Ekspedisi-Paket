@@ -128,6 +128,25 @@ model User {
   deliveryAttempts DeliveryAttempt[]
   codCollections   CodCollection[]
   districtCoverage CourierDistrictCoverage[]
+  notifications    Notification[]
+}
+
+// Notifikasi ringan per-aktor — dibuat di titik serah-terima yang kritis
+// (assign jemput, konfirmasi ambil, assign antar, dispatch retur) supaya
+// tiap alur yang saling terhubung juga kelihatan terhubung di aplikasi,
+// bukan cuma di data. Dibaca lewat polling ringan (React Query), bukan
+// push/websocket — cukup untuk skala kompetisi ini.
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  body      String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead, createdAt])
 }
 
 // Many-to-many: 1 kurir bisa cover beberapa kecamatan, 1 kecamatan bisa
@@ -227,8 +246,14 @@ model Sack {
   id              String     @id @default(cuid())
   originInfo      String
   destinationInfo String
-  items           SackItem[]
-  createdAt       DateTime   @default(now())
+  // Penunjukan kurir penjemput oleh Kepala Gudang — BUKAN custody event,
+  // karena belum ada perpindahan fisik saat penunjukan ini terjadi (Kepala
+  // Gudang menugaskan dari balik meja, kurir baru benar-benar pegang
+  // karungnya nanti di lokasi agen). Event DIANGKUT_KE_GUDANG baru dibuat
+  // saat kurir sendiri konfirmasi sudah mengambil (lihat POST /dispatch).
+  assignedPickupCourierId String?
+  items                   SackItem[]
+  createdAt               DateTime   @default(now())
 }
 
 model SackItem {

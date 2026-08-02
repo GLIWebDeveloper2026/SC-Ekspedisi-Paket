@@ -7,8 +7,9 @@ import { requireAuth, withApiErrorHandling } from "@/lib/api-utils";
 /**
  * Karung yang belum ada satu pun resi-nya dengan event DIANGKUT_KE_GUDANG —
  * dipakai Kepala Gudang untuk memutuskan karung mana yang perlu ditugaskan
- * kurir penjemput. (Sack tidak punya FK ke Warehouse di skema — daftar ini
- * sistem-lebar, bukan di-scope per gudang tertentu.)
+ * kurir penjemput, dan memantau mana yang sudah ditunjuk tapi masih
+ * menunggu kurirnya konfirmasi ambil. (Sack tidak punya FK ke Warehouse di
+ * skema — daftar ini sistem-lebar, bukan di-scope per gudang tertentu.)
  */
 export const GET = withApiErrorHandling(async () => {
   await requireAuth();
@@ -29,6 +30,13 @@ export const GET = withApiErrorHandling(async () => {
 
   const menunggu = sacks.filter((s) => s.items.every((i) => !dispatchedResiIds.has(i.resiId)));
 
+  const assignedCourierIds = [...new Set(menunggu.map((s) => s.assignedPickupCourierId).filter((v): v is string => !!v))];
+  const couriers = await prisma.user.findMany({
+    where: { id: { in: assignedCourierIds } },
+    select: { id: true, name: true },
+  });
+  const courierNameById = new Map(couriers.map((c) => [c.id, c.name]));
+
   return NextResponse.json({
     data: menunggu.map((s) => ({
       sackId: s.id,
@@ -36,6 +44,10 @@ export const GET = withApiErrorHandling(async () => {
       destinationInfo: s.destinationInfo,
       jumlahResi: s.items.length,
       dibuatSejak: s.createdAt,
+      assignedPickupCourierId: s.assignedPickupCourierId,
+      assignedPickupCourierName: s.assignedPickupCourierId
+        ? (courierNameById.get(s.assignedPickupCourierId) ?? null)
+        : null,
     })),
   });
 });

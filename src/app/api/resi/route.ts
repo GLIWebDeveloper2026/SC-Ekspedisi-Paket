@@ -165,7 +165,10 @@ export const GET = withApiErrorHandling(async (req) => {
   const [resiList, totalItems] = await Promise.all([
     prisma.resi.findMany({
       where,
-      include: { originAgent: { select: { id: true, name: true } } },
+      include: {
+        originAgent: { select: { id: true, name: true } },
+        adjustments: { select: { amount: true } },
+      },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -181,6 +184,7 @@ export const GET = withApiErrorHandling(async (req) => {
       recipientName: r.recipientName,
       serviceType: r.serviceType,
       totalOngkir: Number(r.totalOngkir),
+      totalTagihan: Number(r.totalOngkir) + r.adjustments.reduce((sum, a) => sum + Number(a.amount), 0),
       isCod: r.isCod,
       isFragile: r.isFragile,
       itemDescription: r.itemDescription,

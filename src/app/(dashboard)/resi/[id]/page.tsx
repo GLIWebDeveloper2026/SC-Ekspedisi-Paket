@@ -37,10 +37,19 @@ const EVENT_ICONS: Record<string, LucideIcon> = {
   DELIVERY_ATTEMPT: Truck,
   TERKIRIM: CheckCircle2,
   RETUR_KE_GUDANG: Undo2,
+  DIANGKUT_KE_GUDANG: Truck,
   DIANGKUT_KEMBALI_KE_AGEN: Truck,
   DITERIMA_DI_AGEN_ASAL: Package,
   RETUR_KE_PENGIRIM: Undo2,
 };
+
+interface ResiAdjustmentItem {
+  id: string;
+  adjustmentType: string;
+  amount: number;
+  reason: string;
+  createdAt: string;
+}
 
 interface ResiDetail {
   id: string;
@@ -55,6 +64,8 @@ interface ResiDetail {
   biayaDasar: number;
   biayaZona: number;
   totalOngkir: number;
+  totalTagihan: number;
+  adjustments: ResiAdjustmentItem[];
   isCod: boolean;
   nilaiCod: number | null;
   createdAt: string;
@@ -141,7 +152,21 @@ export default function ResiDetailPage({ params }: { params: Promise<{ id: strin
             <Row label="Berat Tertagih" value={`${resi.beratTertagihKg} kg`} mono />
             <Row label="Biaya Dasar" value={`Rp${resi.biayaDasar.toLocaleString("id-ID")}`} mono />
             <Row label="Biaya Zona" value={`Rp${resi.biayaZona.toLocaleString("id-ID")}`} mono />
-            <Row label="Total Ongkir" value={`Rp${resi.totalOngkir.toLocaleString("id-ID")}`} bold mono />
+            <Row label="Total Ongkir" value={`Rp${resi.totalOngkir.toLocaleString("id-ID")}`} mono />
+            {resi.adjustments.length > 0 && (
+              <div className="flex flex-col gap-1 rounded-md bg-muted/40 p-2">
+                {resi.adjustments.map((adj) => (
+                  <div key={adj.id} className="flex items-center justify-between gap-2 text-xs">
+                    <span className="text-muted-foreground">{adj.reason}</span>
+                    <span className={cn("font-mono", adj.amount >= 0 ? "text-stempel" : "text-emerald-600")}>
+                      {adj.amount >= 0 ? "+" : ""}
+                      Rp{adj.amount.toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Row label="Total Tagihan" value={`Rp${resi.totalTagihan.toLocaleString("id-ID")}`} bold mono />
             {resi.isCod && (
               <Row label="Nilai COD" value={`Rp${resi.nilaiCod?.toLocaleString("id-ID")}`} mono />
             )}

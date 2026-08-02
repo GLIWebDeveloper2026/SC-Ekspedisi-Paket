@@ -69,6 +69,24 @@ export const GET = withApiErrorHandling(async () => {
     take: 100,
   });
 
+  const allResiIds = sacks.flatMap((s) => s.items.map((i) => i.resiId));
+  const dispatchedResiIds = new Set(
+    allResiIds.length
+      ? (
+          await prisma.packageCustodyEvent.findMany({
+            where: { resiId: { in: allResiIds }, eventType: CustodyEventType.DIANGKUT_KE_GUDANG },
+            select: { resiId: true },
+          })
+        ).map((e) => e.resiId)
+      : [],
+  );
+
+  const courierIds = [...new Set(sacks.map((s) => s.assignedPickupCourierId).filter((v): v is string => !!v))];
+  const couriers = courierIds.length
+    ? await prisma.user.findMany({ where: { id: { in: courierIds } }, select: { id: true, name: true } })
+    : [];
+  const courierNameById = new Map(couriers.map((c) => [c.id, c.name]));
+
   return NextResponse.json({
     data: sacks.map((s) => ({
       id: s.id,
@@ -76,6 +94,11 @@ export const GET = withApiErrorHandling(async () => {
       destinationInfo: s.destinationInfo,
       itemCount: s.items.length,
       createdAt: s.createdAt,
+      isDispatched: s.items.some((i) => dispatchedResiIds.has(i.resiId)),
+      assignedPickupCourierId: s.assignedPickupCourierId,
+      assignedPickupCourierName: s.assignedPickupCourierId
+        ? (courierNameById.get(s.assignedPickupCourierId) ?? null)
+        : null,
     })),
   });
 });
