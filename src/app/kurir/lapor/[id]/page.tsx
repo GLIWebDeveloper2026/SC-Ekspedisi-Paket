@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { CheckCircle2, XCircle, HandCoins, MapPin, Camera, Zap } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { enqueueDeliveryAttempt } from "@/lib/offline/offlineQueue";
+import { compressImage } from "@/lib/compress-image";
 import { CapStempel } from "@/components/cap-stempel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,11 @@ export default function LaporDeliveryPage({ params }: { params: Promise<{ id: st
   const mutation = useMutation({
     mutationFn: async (): Promise<SubmitOutcome> => {
       const thirdPartyFlag = result === "DITITIP_PIHAK_KETIGA";
+      // Foto langsung dari kamera HP sering >4-8MB, di atas batas payload
+      // Vercel (4,5MB) — dikompres dulu di sini supaya request online tidak
+      // gagal duluan, dan supaya kalau ANTRE OFFLINE, yang disimpan juga versi
+      // kecil (bukan file mentah yang bikin sync berikutnya gagal lagi).
+      const compressedPhoto = proofPhoto ? await compressImage(proofPhoto) : null;
       const payload = {
         resiId,
         noResi: resi?.noResi ?? "",
@@ -59,7 +65,7 @@ export default function LaporDeliveryPage({ params }: { params: Promise<{ id: st
         thirdPartyFlag,
         thirdPartyName: thirdPartyFlag ? thirdPartyName : undefined,
         evidenceNote: evidenceNote || undefined,
-        proofPhoto,
+        proofPhoto: compressedPhoto,
       };
 
       if (!navigator.onLine) {
@@ -76,14 +82,23 @@ export default function LaporDeliveryPage({ params }: { params: Promise<{ id: st
         formData.set("thirdPartyFlag", String(thirdPartyFlag));
         if (thirdPartyFlag) formData.set("thirdPartyName", thirdPartyName);
         if (evidenceNote) formData.set("evidenceNote", evidenceNote);
-        if (proofPhoto) formData.set("proofPhoto", proofPhoto);
+        if (compressedPhoto) formData.set("proofPhoto", compressedPhoto);
 
         await apiFetch("/api/delivery-attempts", { method: "POST", body: formData });
         return { mode: "online" };
-      } catch {
-        // Server unreachable meski navigator.onLine true (mis. sinyal lemah) — fallback ke antrian.
-        await enqueueDeliveryAttempt(payload);
-        return { mode: "offline" };
+      } catch (err) {
+        // Cuma fallback ke antrian offline kalau memang request-nya TIDAK
+        // PERNAH sampai ke server (browser fetch() melempar TypeError untuk
+        // ini — no signal/DNS/CORS). Kalau server SUDAH sempat merespons
+        // dengan error (400/403/500 dst, dilempar apiFetch sebagai Error
+        // biasa), itu bukan soal sinyal — jangan ditutupi jadi "tersimpan
+        // lokal", tapi tampilkan errornya supaya kurir tahu laporannya
+        // memang ditolak, bukan cuma nunggu sinyal.
+        if (err instanceof TypeError) {
+          await enqueueDeliveryAttempt(payload);
+          return { mode: "offline" };
+        }
+        throw err;
       }
     },
     onSuccess: (outcome) => {

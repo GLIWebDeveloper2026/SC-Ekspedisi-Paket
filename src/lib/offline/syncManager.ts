@@ -1,4 +1,5 @@
 import { offlineDb } from "./db";
+import { compressImage } from "../compress-image";
 
 interface SyncResult {
   synced: number;
@@ -24,7 +25,9 @@ async function syncPendingDeliveryAttempts(): Promise<SyncResult> {
       formData.set("thirdPartyFlag", String(item.thirdPartyFlag));
       if (item.thirdPartyName) formData.set("thirdPartyName", item.thirdPartyName);
       if (item.evidenceNote) formData.set("evidenceNote", item.evidenceNote);
-      if (item.proofPhoto) formData.set("proofPhoto", item.proofPhoto);
+      // Kompres lagi di sini (idempotent, defensif) untuk antrean lama yang
+      // sempat tersimpan sebelum kompresi dipasang di titik input.
+      if (item.proofPhoto) formData.set("proofPhoto", await compressImage(item.proofPhoto));
 
       const res = await fetch("/api/delivery-attempts", { method: "POST", body: formData });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
