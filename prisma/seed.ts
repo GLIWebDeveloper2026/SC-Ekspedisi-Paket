@@ -129,6 +129,20 @@ async function main() {
       warehouseId: warehouse.id,
     })),
   });
+  const kurirList = await prisma.user.findMany({ where: { role: Role.KURIR }, orderBy: { email: "asc" } });
+
+  // Cakupan wilayah kurir — TANPA ini, dropdown "pilih kurir" di /sortir dan
+  // /api/sacks/:id/assign-pickup selalu kosong untuk semua kecamatan (tidak
+  // ada satu pun kurir yang meng-cover apa pun secara default). Tiap
+  // kecamatan sengaja dipegang beberapa kurir (backup), dengan sedikit
+  // overlap di kurir "penghubung" antar wilayah.
+  await prisma.courierDistrictCoverage.createMany({
+    data: [
+      ...kurirList.slice(0, 4).map((k) => ({ courierId: k.id, districtId: districtPusat.id })),
+      ...kurirList.slice(3, 7).map((k) => ({ courierId: k.id, districtId: districtSelatan.id })),
+      ...kurirList.slice(6, 11).map((k) => ({ courierId: k.id, districtId: districtJauh.id })),
+    ],
+  });
 
   console.log("Seed selesai.");
   console.log("Password semua akun seed: password123");
